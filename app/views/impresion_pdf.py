@@ -9,6 +9,30 @@ from reportlab.platypus import (
     HRFlowable, Image, KeepTogether, PageBreak,
     Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle,
 )
+from PIL import Image as PILImage
+
+# El logo original y las firmas subidas pueden ser fotos enormes (el logo es
+# 5906x5906): incrustarlas a resolución completa infla cada PDF a ~1.4MB y lo
+# vuelve lento. Se reducen a máx 512px y se cachean por ruta+mtime.
+_img_cache = {}
+
+def _img_chica(path):
+    try:
+        mtime = os.path.getmtime(path)
+        hit = _img_cache.get(path)
+        if hit and hit[0] == mtime:
+            return BytesIO(hit[1])
+        im = PILImage.open(path)
+        im.thumbnail((512, 512))
+        buf = BytesIO()
+        if im.mode in ('RGBA', 'LA') or (im.mode == 'P' and 'transparency' in im.info):
+            im.save(buf, 'PNG', optimize=True)
+        else:
+            im.convert('RGB').save(buf, 'JPEG', quality=85)
+        _img_cache[path] = (mtime, buf.getvalue())
+        return BytesIO(buf.getvalue())
+    except Exception:
+        return path  # sin Pillow o imagen rota: usa el archivo original
 
 
 @role_required(*PERMITIDOS_TODOS)
@@ -136,7 +160,7 @@ def imprimir_estudiante(request, rut):
         ParagraphStyle('hdr', parent=styles['Normal'], alignment=1, fontSize=8, leading=10)
     )
     if os.path.exists(logo_path):
-        header_tbl = Table([[Image(logo_path, width=40, height=40), header_text]], colWidths=[50, 460])
+        header_tbl = Table([[Image(_img_chica(logo_path), width=40, height=40), header_text]], colWidths=[50, 460])
     else:
         header_tbl = Table([[header_text]], colWidths=[510])
     header_tbl.setStyle(TableStyle([
@@ -280,7 +304,7 @@ def imprimir_estudiante(request, rut):
     if not firma_path or not os.path.exists(firma_path):
         firma_path = os.path.join(settings.BASE_DIR, 'app', 'static', 'app', 'img', 'firma_director.jpeg')
 
-    firma_director_img = Image(firma_path, width=100, height=50) if os.path.exists(firma_path) else None
+    firma_director_img = Image(_img_chica(firma_path), width=100, height=50) if os.path.exists(firma_path) else None
     p_normal = ParagraphStyle('p_normal', parent=styles['Normal'], fontSize=9)
 
     LEFT_COL, RIGHT_COL = 200, 310
@@ -432,7 +456,7 @@ def imprimir_estudiantes_por_curso(request, curso_id):
             ParagraphStyle('hdr', parent=styles['Normal'], alignment=1, fontSize=8, leading=10)
         )
         if os.path.exists(logo_path):
-            header_tbl = Table([[Image(logo_path, width=40, height=40), header_text]], colWidths=[50, 460])
+            header_tbl = Table([[Image(_img_chica(logo_path), width=40, height=40), header_text]], colWidths=[50, 460])
         else:
             header_tbl = Table([[header_text]], colWidths=[510])
         header_tbl.setStyle(TableStyle([
@@ -559,7 +583,7 @@ def imprimir_estudiantes_por_curso(request, curso_id):
         if not firma_path or not os.path.exists(firma_path):
             firma_path = os.path.join(settings.BASE_DIR, 'app', 'static', 'app', 'img', 'firma_director.jpeg')
 
-        firma_director_img = Image(firma_path, width=100, height=50) if os.path.exists(firma_path) else None
+        firma_director_img = Image(_img_chica(firma_path), width=100, height=50) if os.path.exists(firma_path) else None
         p_normal = ParagraphStyle('p_normal', parent=styles['Normal'], fontSize=9)
 
         LEFT_COL, RIGHT_COL = 200, 310
@@ -667,7 +691,7 @@ def preview_ficha_pdf(request):
 
     # ===== Encabezado compacto (logo + texto)
     logo_path = os.path.join(settings.BASE_DIR, 'app', 'static', 'app', 'img', 'logo.png')
-    logo = Image(logo_path, width=40, height=40) if os.path.exists(logo_path) else Paragraph('', styles['Normal'])
+    logo = Image(_img_chica(logo_path), width=40, height=40) if os.path.exists(logo_path) else Paragraph('', styles['Normal'])
 
     header_text = Paragraph(
         "LICEO MUNICIPAL DE SAN PEDRO<br/>"
@@ -708,7 +732,7 @@ def preview_ficha_pdf(request):
     elements.append(box_title)
     elements.append(Spacer(1, 6))
 
-    firma_img = Image(firma_path, width=120, height=60) if firma_path and os.path.exists(firma_path) else None
+    firma_img = Image(_img_chica(firma_path), width=120, height=60) if firma_path and os.path.exists(firma_path) else None
     firma_director = Paragraph("Firma Director:", styles['Normal'])
 
     if firma_img:

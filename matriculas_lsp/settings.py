@@ -150,6 +150,7 @@ else:
             'PASSWORD': _required('DB_PASSWORD'),
             'HOST': os.getenv('DB_HOST', ''),
             'PORT': os.getenv('DB_PORT', '3306'),
+            'CONN_MAX_AGE': 60,  # reutiliza la conexión: sin handshake TCP+auth en cada request
             'OPTIONS': {
                 'charset': 'utf8mb4',
                 'init_command': (
