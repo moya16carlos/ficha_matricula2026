@@ -15,6 +15,13 @@ services:
       - "traefik.http.routers.matriculas.tls=true"
       - "traefik.http.routers.matriculas.tls.certresolver=letsencrypt"
       - "traefik.http.services.matriculas.loadbalancer.server.port=8000"
+    networks:
+      - proxy
+networks:
+  proxy:
+    external: true
+    # nombre de TU red de traefik: averígualo con `docker network ls` y ajústalo en .env
+    name: ${TRAEFIK_NETWORK:-proxy}
     command: >
       sh -c "python manage.py migrate &&
              python manage.py collectstatic --noinput &&
