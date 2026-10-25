@@ -10,6 +10,21 @@
 
   <!-- Tailwind (CDN JIT; el tailwind.css compilado viejo tenía un body con gradiente y img redondas → eliminado) -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    // Contraste: paleta slate un paso más oscura (textos secundarios legibles)
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            slate: {
+              200: '#e2e8f0', 300: '#94a3b8', 400: '#64748b', 500: '#475569',
+              600: '#334155', 700: '#1e293b', 800: '#0f172a', 900: '#020617'
+            }
+          }
+        }
+      }
+    };
+  </script>
 
   <!-- Tipografía opcional (Inter) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -23,7 +38,7 @@
   </style>
 </head>
 
-<body class="bg-slate-50 text-slate-800 flex flex-col min-h-screen">
+<body class="bg-slate-200 text-slate-900 flex flex-col min-h-screen">
 
   <!-- Header institucional (claro) -->
   <header class="sticky top-0 z-40 bg-white border-b border-slate-200">
