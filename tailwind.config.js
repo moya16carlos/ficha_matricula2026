@@ -1,12 +1,18 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
-    './templates/**/*.html',            // Busca en todas las plantillas HTML dentro de templates/
-    './templates/app/**/*.html',        // Busca específicamente en las vistas de la carpeta app/
-    './static/app/js/**/*.js',          // Busca en cualquier archivo JS dentro de static/app/js/
+    './app/templates/**/*.html',  // todas las plantillas (incluye el JS inline, escaneado como texto)
   ],
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        // Contraste: paleta slate un paso más oscura (textos secundarios legibles)
+        slate: {
+          200: '#e2e8f0', 300: '#94a3b8', 400: '#64748b', 500: '#475569',
+          600: '#334155', 700: '#1e293b', 800: '#0f172a', 900: '#020617'
+        }
+      }
+    },
   },
   plugins: [],
 }
