@@ -143,8 +143,8 @@
           <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
 
             <div>
-              <label for="rut" class="block text-sm font-medium text-slate-700 mb-1">RUT (sin puntos ni guion) <span class="text-red-500">*</span></label>
-              <input type="text" id="rut" name="rut" placeholder="Ej: 12345678K" required
+              <label for="rut" class="block text-sm font-medium text-slate-700 mb-1">RUT <span class="text-red-500">*</span></label>
+              <input type="text" id="rut" name="rut" placeholder="Ej: 199852647" required
                      data-required="1" data-label="RUT" data-validate="rut"
                      oninput="this.value=this.value.replace(/[^0-9kK]/g,'').toUpperCase()"
                      class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500">
@@ -688,21 +688,34 @@
     addEventListener('scroll', spy, { passive: true }); spy();
 
     // --- validadores ---
+    function dvDe(c) {
+      let sum = 0, factor = 2;
+      for (let i = c.length - 1; i >= 0; i--) { sum += parseInt(c[i]) * factor; factor = factor === 7 ? 2 : factor + 1; }
+      const r = 11 - (sum % 11);
+      return r === 11 ? '0' : r === 10 ? 'K' : String(r);
+    }
     function dvOk(v) {
       v = v.replace(/[.\-\s]/g, '').toUpperCase();
       if (!/^\d{7,8}[0-9K]$/.test(v)) return false;
-      const cuerpo = v.slice(0, -1), dvIn = v.slice(-1);
-      let sum = 0, factor = 2;
-      for (let i = cuerpo.length - 1; i >= 0; i--) { sum += parseInt(cuerpo[i]) * factor; factor = factor === 7 ? 2 : factor + 1; }
-      const r = 11 - (sum % 11);
-      return dvIn === (r === 11 ? '0' : r === 10 ? 'K' : String(r));
+      return v.slice(-1) === dvDe(v.slice(0, -1));
     }
     const RULES = {
-      rut: v => v === '' ? null : (dvOk(v) ? null : 'RUT inválido (revisa el dígito verificador)'),
       email: v => v === '' ? null : (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? null : 'Correo inválido')
     };
 
+    // RUT: si es chileno válido se formatea solo (19.985.264-7); nunca bloquea el guardado
+    function fmtRut(n) {
+      return n.slice(0, -1).replace(/\B(?=(\d{3})+(?!\d))/g, '.') + '-' + n.slice(-1);
+    }
     function revisa(el) {
+      if (el.dataset.validate === 'rut') {
+        let n = el.value.replace(/[.\-\s]/g, '').toUpperCase();
+        // escribió solo el cuerpo (7-8 dígitos, sin DV) → le calculamos el DV
+        if (/^\d{7,8}$/.test(n) && !dvOk(n)) n += dvDe(n);
+        if (n && dvOk(n)) { el.value = fmtRut(n); el.classList.add('ok'); }
+        el.classList.remove('bad');
+        return;
+      }
       if (el.tagName === 'SELECT') {
         el.classList.toggle('bad', !!(el.dataset.required && !el.value));
         return;
