@@ -15,17 +15,18 @@ services:
       - "traefik.http.routers.matriculas.tls=true"
       - "traefik.http.routers.matriculas.tls.certresolver=letsencrypt"
       - "traefik.http.services.matriculas.loadbalancer.server.port=8000"
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             gunicorn matriculas_lsp.wsgi:application --bind 0.0.0.0:8000 --workers 2 --threads 2 --timeout 120"
     networks:
       - proxy
+
 networks:
   proxy:
     external: true
     # nombre de TU red de traefik: averígualo con `docker network ls` y ajústalo en .env
     name: ${TRAEFIK_NETWORK:-proxy}
-    command: >
-      sh -c "python manage.py migrate &&
-             python manage.py collectstatic --noinput &&
-             gunicorn matriculas_lsp.wsgi:application --bind 0.0.0.0:8000 --workers 2 --threads 2 --timeout 120"
 
 volumes:
   static_data:
