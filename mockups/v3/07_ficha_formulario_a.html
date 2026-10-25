@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MOCKUP A · Ficha de Matrícula Guiada · LSP</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = { theme: { extend: { colors: { slate: {
+    200:'#e2e8f0',300:'#94a3b8',400:'#64748b',500:'#475569',600:'#334155',700:'#1e293b',800:'#0f172a',900:'#020617'
+  }}}}};
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>html,body{font-family:'Inter',system-ui,sans-serif}
+.spy.activo{color:#4338ca;background:#eef2ff;font-weight:600}
+input.ok{border-color:#34d399 !important}
+input.bad,select.bad{border-color:#f87171 !important;background:#fef2f2}
+</style>
+</head>
+<body class="bg-slate-200 text-slate-900 min-h-screen">
+
+<!-- badge mockup -->
+<div class="fixed top-3 right-3 z-50 rounded-full bg-amber-400 text-amber-950 text-xs font-bold px-3 py-1 shadow">MOCKUP A · Ficha guiada</div>
+
+<section class="py-7">
+  <div class="mx-auto max-w-7xl px-6">
+    <nav class="flex items-center gap-1.5 text-xs text-slate-400 mb-3">
+      <span class="hover:text-indigo-600 cursor-pointer">Inicio</span><span>/</span>
+      <span class="text-slate-600 font-medium">Nuevo estudiante</span>
+    </nav>
+    <header class="mb-6 flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h1 class="text-2xl font-bold text-slate-900">Nuevo Estudiante</h1>
+        <p class="text-sm text-slate-500 mt-0.5">La ficha se valida campo por campo mientras escribes. Campos con <span class="text-red-500 font-bold">*</span> obligatorios.</p>
+      </div>
+      <div class="inline-flex items-center gap-2 rounded-xl bg-white ring-1 ring-slate-200 px-4 py-2.5 text-sm text-slate-600">
+        Registrado por: <strong class="text-slate-800">Carlos Moya</strong>
+      </div>
+    </header>
+
+    <!-- Resumen de errores (aparece al fallar Guardar) -->
+    <div id="error-summary" role="alert" tabindex="-1"
+         class="hidden mb-6 rounded-2xl ring-1 ring-red-200 bg-red-50 p-5">
+      <h2 class="font-bold text-red-800 flex items-center gap-2">
+        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-width="2" d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/></svg>
+        Hay <span id="err-count">0</span> campo(s) por corregir
+      </h2>
+      <ul id="err-list" class="mt-3 space-y-1.5 text-sm"></ul>
+    </div>
+
+    <div class="flex gap-6 items-start">
+      <!-- ===== Índice lateral con progreso por sección ===== -->
+      <aside class="hidden lg:block w-64 shrink-0 sticky top-6">
+        <div class="rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm p-3">
+          <p class="px-3 pt-1 pb-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">Secciones</p>
+          <a href="#sec-1" class="spy block rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-slate-50">
+            <span class="flex items-center justify-between gap-2">
+              <span>1 · Estudiante</span>
+              <span data-chip="sec-1" class="rounded-full px-2 py-0.5 text-[10px] font-bold bg-amber-100 text-amber-700">3</span>
+            </span>
+          </a>
+          <a href="#sec-2" class="spy block rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-slate-50">
+            <span class="flex items-center justify-between gap-2"><span>2 · Padres</span>
+              <span data-chip="sec-2" class="rounded-full px-2 py-0.5 text-[10px] font-bold bg-slate-100 text-slate-500">opcional</span></span>
+          </a>
+          <a href="#sec-3" class="spy block rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-slate-50">
+            <span class="flex items-center justify-between gap-2"><span>3 · Apoderado</span>
+              <span data-chip="sec-3" class="rounded-full px-2 py-0.5 text-[10px] font-bold bg-slate-100 text-slate-500">opcional</span></span>
+          </a>
+          <a href="#sec-4" class="spy block rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-slate-50">
+            <span class="flex items-center justify-between gap-2"><span>4 · Apod. suplente</span>
+              <span data-chip="sec-4" class="rounded-full px-2 py-0.5 text-[10px] font-bold bg-slate-100 text-slate-500">opcional</span></span>
+          </a>
+          <a href="#sec-5" class="spy block rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-slate-50">
+            <span class="flex items-center justify-between gap-2"><span>5 · Social y salud</span>
+              <span data-chip="sec-5" class="rounded-full px-2 py-0.5 text-[10px] font-bold bg-slate-100 text-slate-500">opcional</span></span>
+          </a>
+          <a href="#sec-6" class="spy block rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-slate-50">
+            <span class="flex items-center justify-between gap-2"><span>6 · Transporte</span>
+              <span data-chip="sec-6" class="rounded-full px-2 py-0.5 text-[10px] font-bold bg-slate-100 text-slate-500">opcional</span></span>
+          </a>
+          <div class="mt-2 border-t border-slate-100 px-3 pt-3 pb-1 text-xs text-slate-500">
+            Faltan <strong id="total-vacios" class="text-slate-800">3</strong> obligatorios en total
+          </div>
+        </div>
+      </aside>
+
+      <main class="flex-1 min-w-0 space-y-5">
+
+      <!-- Selector de año -->
+      <div class="rounded-xl bg-white ring-1 ring-slate-200 shadow-sm p-4 flex flex-wrap items-center gap-3">
+        <label class="text-xs font-semibold uppercase tracking-wide text-slate-400">Año visible</label>
+        <select class="w-40 px-3 py-2 rounded-lg border border-slate-300 bg-slate-50"><option>2026</option></select>
+        <span class="text-sm text-slate-500">Mostrando cursos del año según tus permisos.</span>
+      </div>
+
+      <form id="ficha">
+
+      <!-- ===== 1 · Estudiante ===== -->
+      <section id="sec-1" class="scroll-mt-6 rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm">
+        <div class="flex items-center justify-between gap-3 px-6 py-4 border-b border-slate-100">
+          <h2 class="flex items-center gap-2.5 font-bold text-slate-900"><span class="grid place-items-center h-7 w-7 rounded-lg bg-indigo-600 text-white text-sm font-bold">1</span>Información del Estudiante</h2>
+          <span data-chip2="sec-1" class="rounded-full px-2.5 py-0.5 text-xs font-semibold bg-amber-50 ring-1 ring-amber-200 text-amber-700">3 obligatorios vacíos</span>
+        </div>
+        <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1" for="rut">RUT (sin puntos ni guion) <span class="text-red-500">*</span></label>
+            <input id="rut" name="rut" data-validate="rut" data-required="1" data-label="RUT" placeholder="12345678K"
+                   class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500">
+            <p class="hidden mt-1 text-xs text-red-600" data-error="rut"></p>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1" for="nombre_completo">Nombre Completo <span class="text-red-500">*</span></label>
+            <input id="nombre_completo" name="nombre_completo" data-required="1" data-label="Nombre completo"
+                   class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500">
+            <p class="hidden mt-1 text-xs text-red-600" data-error="nombre_completo"></p>
+          </div>
+          <div class="md:col-span-2">
+            <label class="block text-sm font-medium text-slate-700 mb-1" for="curso">Curso <span class="text-red-500">*</span></label>
+            <select id="curso" name="curso" data-required="1" data-label="Curso"
+                    class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500">
+              <option value="">Seleccionar Curso</option>
+              <option>1° Medio A - 2026</option><option>1° Medio B - 2026</option>
+              <option>2° Medio A - 2026</option><option>3° Medio A - 2026</option><option>4° Medio A - 2026</option>
+            </select>
+            <p class="hidden mt-1 text-xs text-red-600" data-error="curso"></p>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1" for="fecha_nacimiento">Fecha de Nacimiento <span class="text-red-500">*</span></label>
+            <input type="date" id="fecha_nacimiento" name="fecha_nacimiento" data-required="1" data-label="Fecha de nacimiento"
+                   class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500">
+            <p class="hidden mt-1 text-xs text-red-600" data-error="fecha_nacimiento"></p>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1" for="sexo">Sexo</label>
+            <select id="sexo" class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white"><option value="">Seleccionar</option><option>Masculino</option><option>Femenino</option></select>
+          </div>
+          <div><label class="block text-sm font-medium text-slate-700 mb-1">Nacionalidad</label><input class="w-full px-3 py-2 rounded-lg border border-slate-300" placeholder="Chilena"></div>
+          <div><label class="block text-sm font-medium text-slate-700 mb-1">Domicilio</label><input class="w-full px-3 py-2 rounded-lg border border-slate-300"></div>
+          <div><label class="block text-sm font-medium text-slate-700 mb-1">Comuna</label><input class="w-full px-3 py-2 rounded-lg border border-slate-300" placeholder="San Pedro"></div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Ascendencia Indígena</label>
+            <select class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white"><option value="">Seleccionar</option><option>No</option><option>Sí</option></select>
+          </div>
+          <div><label class="block text-sm font-medium text-slate-700 mb-1">Etnia</label><input class="w-full px-3 py-2 rounded-lg border border-slate-300"></div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Pertenece al PIE</label>
+            <select class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white"><option value="">Seleccionar</option><option>No</option><option>Sí</option></select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Ha repetido curso</label>
+            <select class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white"><option value="">Seleccionar</option><option>No</option><option>Sí</option></select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Estado del Estudiante</label>
+            <select class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white"><option value="">Seleccionar</option><option>Activo</option><option>Inactivo</option><option>Egresado</option></select>
+          </div>
+          <div><label class="block text-sm font-medium text-slate-700 mb-1">Establecimiento de procedencia</label><input class="w-full px-3 py-2 rounded-lg border border-slate-300"></div>
+        </div>
+      </section>
+
+      <!-- ===== 2 · Padres ===== -->
+      <section id="sec-2" class="scroll-mt-6 rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm">
+        <div class="flex items-center justify-between gap-3 px-6 py-4 border-b border-slate-100">
+          <h2 class="flex items-center gap-2.5 font-bold text-slate-900"><span class="grid place-items-center h-7 w-7 rounded-lg bg-indigo-600 text-white text-sm font-bold">2</span>Información de los Padres</h2>
+          <span data-chip2="sec-2" class="rounded-full px-2.5 py-0.5 text-xs font-semibold bg-slate-100 ring-1 ring-slate-200 text-slate-500">opcional</span>
+        </div>
+        <div class="p-6 grid grid-cols-1 xl:grid-cols-2 gap-5">
+          <div class="rounded-xl ring-1 ring-slate-200 p-4">
+            <p class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Madre</p>
+            <div class="grid grid-cols-1 gap-4">
+              <div><label class="block text-sm font-medium text-slate-700 mb-1">Nombre</label><input data-validate="nombre" class="w-full px-3 py-2 rounded-lg border border-slate-300"></div>
+              <div><label class="block text-sm font-medium text-slate-700 mb-1">RUT</label><input data-validate="rut" class="w-full px-3 py-2 rounded-lg border border-slate-300"><p class="hidden mt-1 text-xs text-red-600"></p></div>
+              <div><label class="block text-sm font-medium text-slate-700 mb-1">Teléfono</label><input class="w-full px-3 py-2 rounded-lg border border-slate-300" placeholder="+56 9 ..."></div>
+              <div><label class="block text-sm font-medium text-slate-700 mb-1">Nivel Educacional</label><input class="w-full px-3 py-2 rounded-lg border border-slate-300"></div>
+              <div><label class="block text-sm font-medium text-slate-700 mb-1">Ocupación</label><input class="w-full px-3 py-2 rounded-lg border border-slate-300"></div>
+              <div><label class="block text-sm font-medium text-slate-700 mb-1">Correo Electrónico</label><input data-validate="email" class="w-full px-3 py-2 rounded-lg border border-slate-300"><p class="hidden mt-1 text-xs text-red-600"></p></div>
+            </div>
+          </div>
+          <div class="rounded-xl ring-1 ring-slate-200 p-4">
+            <p class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Padre</p>
+            <div class="grid grid-cols-1 gap-4">
+              <div><label class="block text-sm font-medium text-slate-700 mb-1">Nombre</label><input data-validate="nombre" class="w-full px-3 py-2 rounded-lg border border-slate-300"></div>
+              <div><label class="block text-sm font-medium text-slate-700 mb-1">RUT</label><input data-validate="rut" class="w-full px-3 py-2 rounded-lg border border-slate-300"><p class="hidden mt-1 text-xs text-red-600"></p></div>
+              <div><label class="block text-sm font-medium text-slate-700 mb-1">Teléfono</label><input class="w-full px-3 py-2 rounded-lg border border-slate-300" placeholder="+56 9 ..."></div>
+              <div><label class="block text-sm font-medium text-slate-700 mb-1">Nivel Educacional</label><input class="w-full px-3 py-2 rounded-lg border border-slate-300"></div>
+              <div><label class="block text-sm font-medium text-slate-700 mb-1">Ocupación</label><input class="w-full px-3 py-2 rounded-lg border border-slate-300"></div>
+              <div><label class="block text-sm font-medium text-slate-700 mb-1">Correo Electrónico</label><input data-validate="email" class="w-full px-3 py-2 rounded-lg border border-slate-300"><p class="hidden mt-1 text-xs text-red-600"></p></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== 3 · Apoderado ===== -->
+      <section id="sec-3" class="scroll-mt-6 rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm">
+        <div class="flex items-center justify-between gap-3 px-6 py-4 border-b border-slate-100">
+          <h2 class="flex items-center gap-2.5 font-bold text-slate-900"><span class="grid place-items-center h-7 w-7 rounded-lg bg-indigo-600 text-white text-sm font-bold">3</span>Información del Apoderado</h2>
+          <span data-chip2="sec-3" class="rounded-full px-2.5 py-0.5 text-xs font-semibold bg-slate-100 ring-1 ring-slate-200 text-slate-500">opcional</span>
+        </div>
+        <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div><label class="block text-sm font-medium text-slate-700 mb-1">Nombre del Apoderado</label><input data-validate="nombre" class="w-full px-3 py-2 rounded-lg border border-slate-300"></div>
+          <div><label class="block text-sm font-medium text-slate-700 mb-1">RUT</label><input data-validate="rut" class="w-full px-3 py-2 rounded-lg border border-slate-300"><p class="hidden mt-1 text-xs text-red-600"></p></div>
+          <div><label class="block text-sm font-medium text-slate-700 mb-1">Teléfono</label><input class="w-full px-3 py-2 rounded-lg border border-slate-300"></div>
+          <div><label class="block text-sm font-medium text-slate-700 mb-1">Nivel Educacional</label><input class="w-full px-3 py-2 rounded-lg border border-slate-300"></div>
+          <div><label class="block text-sm font-medium text-slate-700 mb-1">Ocupación</label><input class="w-full px-3 py-2 rounded-lg border border-slate-300"></div>
+          <div><label class="block text-sm font-medium text-slate-700 mb-1">Correo Electrónico</label><input data-validate="email" class="w-full px-3 py-2 rounded-lg border border-slate-300"><p class="hidden mt-1 text-xs text-red-600"></p></div>
+          <div><label class="block text-sm font-medium text-slate-700 mb-1">Fecha de Nacimiento apoderado</label><input type="date" class="w-full px-3 py-2 rounded-lg border border-slate-300"></div>
+        </div>
+      </section>
+
+      <!-- ===== 4 · Apoderado Suplente ===== -->
+      <section id="sec-4" class="scroll-mt-6 rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm">
+        <div class="flex items-center justify-between gap-3 px-6 py-4 border-b border-slate-100">
+          <h2 class="flex items-center gap-2.5 font-bold text-slate-900"><span class="grid place-items-center h-7 w-7 rounded-lg bg-indigo-600 text-white text-sm font-bold">4</span>Apoderado Suplente</h2>
+          <span data-chip2="sec-4" class="rounded-full px-2.5 py-0.5 text-xs font-semibold bg-slate-100 ring-1 ring-slate-200 text-slate-500">opcional</span>
+        </div>
+        <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div><label class="block text-sm font-medium text-slate-700 mb-1">Nombre</label><input data-validate="nombre" class="w-full px-3 py-2 rounded-lg border border-slate-300"></div>
+          <div><label class="block text-sm font-medium text-slate-700 mb-1">RUT</label><input data-validate="rut" class="w-full px-3 py-2 rounded-lg border border-slate-300"><p class="hidden mt-1 text-xs text-red-600"></p></div>
+          <div><label class="block text-sm font-medium text-slate-700 mb-1">Parentesco con el estudiante</label><input class="w-full px-3 py-2 rounded-lg border border-slate-300"></div>
+          <div><label class="block text-sm font-medium text-slate-700 mb-1">Teléfono</label><input class="w-full px-3 py-2 rounded-lg border border-slate-300"></div>
+          <div><label class="block text-sm font-medium text-slate-700 mb-1">Nivel Educacional</label><input class="w-full px-3 py-2 rounded-lg border border-slate-300"></div>
+          <div><label class="block text-sm font-medium text-slate-700 mb-1">Ocupación</label><input class="w-full px-3 py-2 rounded-lg border border-slate-300"></div>
+          <div><label class="block text-sm font-medium text-slate-700 mb-1">Correo Electrónico</label><input data-validate="email" class="w-full px-3 py-2 rounded-lg border border-slate-300"><p class="hidden mt-1 text-xs text-red-600"></p></div>
+        </div>
+      </section>
+
+      <!-- ===== 5 · Social y salud ===== -->
+      <section id="sec-5" class="scroll-mt-6 rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm">
+        <div class="flex items-center justify-between gap-3 px-6 py-4 border-b border-slate-100">
+          <h2 class="flex items-center gap-2.5 font-bold text-slate-900"><span class="grid place-items-center h-7 w-7 rounded-lg bg-indigo-600 text-white text-sm font-bold">5</span>Información Social y de Salud</h2>
+          <span data-chip2="sec-5" class="rounded-full px-2.5 py-0.5 text-xs font-semibold bg-slate-100 ring-1 ring-slate-200 text-slate-500">opcional</span>
+        </div>
+        <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Vive con</label>
+            <select class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white"><option>Ambos Padres</option><option>Padre</option><option>Madre</option><option>Otros</option></select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Resolución Judicial</label>
+            <select class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white"><option>No</option><option>Sí</option></select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">¿Problemas de salud o alergia?</label>
+            <select class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white"><option>No</option><option>Sí</option></select>
+          </div>
+          <div><label class="block text-sm font-medium text-slate-700 mb-1">¿Cuál? Especificar</label><input class="w-full px-3 py-2 rounded-lg border border-slate-300"></div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Impedimento para EF</label>
+            <select class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white"><option>No</option><option>Sí</option></select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Sistema de salud</label>
+            <select class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white"><option>Fonasa</option><option>Isapre</option><option>Particular</option></select>
+          </div>
+          <div><label class="block text-sm font-medium text-slate-700 mb-1">Seguro salud complementario</label><input class="w-full px-3 py-2 rounded-lg border border-slate-300"></div>
+        </div>
+      </section>
+
+      <!-- ===== 6 · Transporte ===== -->
+      <section id="sec-6" class="scroll-mt-6 rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm">
+        <div class="flex items-center justify-between gap-3 px-6 py-4 border-b border-slate-100">
+          <h2 class="flex items-center gap-2.5 font-bold text-slate-900"><span class="grid place-items-center h-7 w-7 rounded-lg bg-indigo-600 text-white text-sm font-bold">6</span>Transporte y Otros Aspectos</h2>
+          <span data-chip2="sec-6" class="rounded-full px-2.5 py-0.5 text-xs font-semibold bg-slate-100 ring-1 ring-slate-200 text-slate-500">opcional</span>
+        </div>
+        <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div><label class="block text-sm font-medium text-slate-700 mb-1">Tipo de transporte</label><input class="w-full px-3 py-2 rounded-lg border border-slate-300"></div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Opta por clases de religión católica</label>
+            <select class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white"><option>No</option><option>Sí</option></select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Acepta fotografías y/o videos educativos</label>
+            <select class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white"><option>No</option><option>Sí</option></select>
+          </div>
+          <div><label class="block text-sm font-medium text-slate-700 mb-1">Fecha matrícula</label><input type="date" class="w-full px-3 py-2 rounded-lg border border-slate-300"></div>
+        </div>
+      </section>
+
+      </form>
+      </main>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Barra inferior sticky ===== -->
+<div class="sticky bottom-0 z-30 bg-white/90 backdrop-blur border-t border-slate-200">
+  <div class="mx-auto max-w-7xl px-6 py-3 flex flex-wrap items-center justify-between gap-3">
+    <p class="text-sm text-slate-600">
+      <span id="bar-seccion" class="font-semibold text-slate-800">Sección 1 de 6</span> ·
+      <span id="bar-vacios" class="text-amber-700 font-medium">3 obligatorios por completar</span>
+    </p>
+    <div class="flex items-center gap-3">
+      <button type="button" onclick="guardar()"
+              class="w-56 bg-indigo-600 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-indigo-700 transition shadow-sm">
+        Guardar Estudiante
+      </button>
+      <span class="w-56 text-center bg-white ring-1 ring-slate-300 text-slate-400 py-2.5 rounded-xl text-sm font-semibold">Imprimir Estudiante</span>
+    </div>
+  </div>
+</div>
+
+<script>
+// ==== scrollspy ====
+const links=[...document.querySelectorAll('.spy')];
+const secs=links.map(a=>document.querySelector(a.getAttribute('href')));
+const spy=()=>{const y=160;let act=secs[0];
+  secs.forEach(s=>{if(s&&s.getBoundingClientRect().top<=y)act=s;});
+  links.forEach(l=>l.classList.toggle('activo',!!act&&l.getAttribute('href')==='#'+act.id));
+  if(act){const n=act.id.split('-')[1];
+    document.getElementById('bar-seccion').textContent='Sección '+n+' de 6';}};
+addEventListener('scroll',spy,{passive:true});spy();
+
+// ==== validación ====
+function validaRut(v){
+  v=v.replace(/[.\-\s]/g,'').toUpperCase();
+  if(!/^\d{7,8}[0-9K]$/.test(v)) return false;
+  const cuerpo=v.slice(0,-1),dvIn=v.slice(-1);
+  let m=0,s=1;
+  for(let i=cuerpo.length-1;i>=0;i--){s=(s+parseInt(cuerpo[i])*(9-m%6))%11;m++;}
+  return dvIn===(s===0?'0':s===10?'K':String(s-1));
+}
+const RULES={
+  rut:v=>v===''?null:(validaRut(v)?null:'RUT inválido (revisa el dígito verificador)'),
+  email:v=>v===''?null:(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)?null:'Correo inválido'),
+  nombre:v=>v===''?null:(v.trim().split(/\s+/).length>=2?null:'Escribe nombre y apellido')
+};
+const required=[...document.querySelectorAll('[data-required]')];
+function marca(el,msg){
+  const err=el.closest('div').parentElement.querySelector('[data-error="'+el.id+'"]')||el.closest('div').querySelector('[data-error], .text-red-600');
+  el.classList.remove('ok','bad');
+  if(msg){el.classList.add('bad');if(err){err.textContent=msg;err.classList.remove('hidden');}}
+  else{if(el.value.trim())el.classList.add('ok');if(err)err.classList.add('hidden');}
+}
+function revisa(el){
+  if(el.tagName==='SELECT'){const bad=el.dataset.required&&!el.value;el.classList.toggle('bad',!!bad);return;}
+  const r=RULES[el.dataset.validate];if(!r){if(el.value.trim())el.classList.add('ok');return;}
+  marca(el,r(el.value));
+}
+document.querySelectorAll('[data-validate],[data-required]').forEach(el=>{
+  el.addEventListener('blur',()=>revisa(el));
+  el.addEventListener('input',()=>{el.classList.remove('bad');});
+});
+
+// ==== contadores por sección ====
+function chipFor(sec,vacios,hasReq){
+  const cls=vacios>0?'bg-amber-100 text-amber-700':'bg-emerald-100 text-emerald-700';
+  const txt=!hasReq?'opcional':(vacios===0?'completa':vacios+' obligatorios vacíos');
+  return {cls,txt};
+}
+function refresca(){
+  let total=0;
+  secs.forEach(sec=>{
+    const reqs=[...sec.querySelectorAll('[data-required]')];
+    const vacios=reqs.filter(r=>!r.value.trim()||r.classList.contains('bad')).length;
+    total+=vacios;
+    const id=sec.id;
+    document.querySelectorAll('[data-chip="'+id+'"],[data-chip2="'+id+'"]').forEach(ch=>{
+      const c=chipFor(sec,vacios,reqs.length>0);
+      ch.className='rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 '+(vacios>0&&reqs.length?'bg-amber-50 ring-amber-200 text-amber-700':(reqs.length&&vacios===0?'bg-emerald-50 ring-emerald-200 text-emerald-700':'bg-slate-100 ring-slate-200 text-slate-500'));
+      ch.textContent=reqs.length?c.txt.replace(' obligatorios',''):c.txt;
+    });
+  });
+  document.getElementById('total-vacios').textContent=total;
+  const b=document.getElementById('bar-vacios');
+  b.textContent=total===0?'Todo listo para guardar':total+' obligatorios por completar';
+  b.className=total===0?'text-emerald-700 font-medium':'text-amber-700 font-medium';
+}
+document.querySelectorAll('[data-validate],[data-required]').forEach(el=>{
+  el.addEventListener('blur',()=>setTimeout(refresca,0));
+  el.addEventListener('input',()=>setTimeout(refresca,0));
+});
+refresca();
+
+// ==== Guardar: demuestra el resumen de errores ====
+function guardar(){
+  secs.forEach(s=>s.querySelectorAll('[data-validate]').forEach(revisa));
+  const bads=[...document.querySelectorAll('#ficha [data-required]')].filter(r=>!r.value.trim());
+  const invalid=[...document.querySelectorAll('#ficha input.bad')];
+  const all=[...new Set([...bads,...invalid])];
+  const box=document.getElementById('error-summary');
+  if(all.length===0){box.classList.add('hidden');alert('(demo) Se guardaría el estudiante ✔');return;}
+  document.getElementById('err-count').textContent=all.length;
+  const ul=document.getElementById('err-list');ul.innerHTML='';
+  all.forEach(el=>{
+    const li=document.createElement('li');
+    const a=document.createElement('a');
+    a.href='#';a.textContent='• '+el.closest('div').querySelector('label').textContent.replace('*','').trim()+(el.classList.contains('bad')?' (valor inválido)':' (vacío)');
+    a.className='text-red-700 underline decoration-red-300 hover:text-red-900';
+    a.onclick=e=>{e.preventDefault();el.scrollIntoView({behavior:'smooth',block:'center'});el.focus({preventScroll:true});};
+    li.appendChild(a);ul.appendChild(li);
+  });
+  box.classList.remove('hidden');
+  box.scrollIntoView({behavior:'smooth',block:'start'});
+  box.focus();
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MOCKUP B · Ficha de Matrícula Compacta · LSP</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = { theme: { extend: { colors: { slate: {
+    200:'#e2e8f0',300:'#94a3b8',400:'#64748b',500:'#475569',600:'#334155',700:'#1e293b',800:'#0f172a',900:'#020617'
+  }}}}};
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>html,body{font-family:'Inter',system-ui,sans-serif}
+input.ok{border-color:#34d399 !important}
+input.bad,select.bad{border-color:#f87171 !important;background:#fef2f2}
+.acc[data-open="0"] .acc-body{display:none}
+.acc[data-open="1"] .acc-toggle .flecha{transform:rotate(180deg)}
+.acc .flecha{transition:transform .2s}
+</style>
+</head>
+<body class="bg-slate-200 text-slate-900 min-h-screen">
+
+<div class="fixed top-3 right-3 z-50 rounded-full bg-amber-400 text-amber-950 text-xs font-bold px-3 py-1 shadow">MOCKUP B · Ficha compacta</div>
+
+<!-- barra superior sticky con progreso -->
+<div class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200">
+  <div class="mx-auto max-w-6xl px-6 py-3 flex flex-wrap items-center gap-4">
+    <div>
+      <h1 class="text-lg font-bold text-slate-900 leading-tight">Nuevo Estudiante</h1>
+      <p class="text-xs text-slate-500">Registrado por <strong>Carlos Moya</strong> · Año 2026</p>
+    </div>
+    <div class="flex-1 min-w-[200px]">
+      <div class="flex items-center justify-between text-xs text-slate-500 mb-1">
+        <span>Progreso de obligatorios</span><span id="pct-txt" class="font-semibold text-slate-700">0%</span>
+      </div>
+      <div class="h-2 rounded-full bg-slate-100 overflow-hidden">
+        <div id="pct-bar" class="h-full w-0 rounded-full bg-indigo-600 transition-all duration-300"></div>
+      </div>
+    </div>
+    <div class="flex items-center gap-2 text-xs font-semibold">
+      <a href="#sec-1" class="navpill rounded-full px-3 py-1.5 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200">1 Estudiante</a>
+      <a href="#sec-2" class="navpill rounded-full px-3 py-1.5 bg-white text-slate-600 ring-1 ring-slate-200">2 Padres</a>
+      <a href="#sec-3" class="navpill rounded-full px-3 py-1.5 bg-white text-slate-600 ring-1 ring-slate-200">3 Apoderado</a>
+      <a href="#sec-4" class="navpill rounded-full px-3 py-1.5 bg-white text-slate-600 ring-1 ring-slate-200">4 Suplente</a>
+      <a href="#sec-5" class="navpill rounded-full px-3 py-1.5 bg-white text-slate-600 ring-1 ring-slate-200">5 Social</a>
+      <a href="#sec-6" class="navpill rounded-full px-3 py-1.5 bg-white text-slate-600 ring-1 ring-slate-200">6 Transporte</a>
+    </div>
+  </div>
+</div>
+
+<section class="py-6">
+  <div class="mx-auto max-w-6xl px-6 space-y-4">
+
+    <!-- Resumen de errores -->
+    <div id="error-summary" role="alert" tabindex="-1"
+         class="hidden rounded-2xl ring-1 ring-red-200 bg-red-50 p-5">
+      <h2 class="font-bold text-red-800">Hay <span id="err-count">0</span> campo(s) por corregir</h2>
+      <ul id="err-list" class="mt-3 space-y-1.5 text-sm"></ul>
+    </div>
+
+    <form id="ficha" class="space-y-4">
+
+    <!-- 1 · Estudiante -->
+    <section id="sec-1" class="acc scroll-mt-24 rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm" data-open="1">
+      <button type="button" class="acc-toggle w-full flex items-center justify-between gap-3 px-6 py-4 text-left">
+        <span class="flex items-center gap-2.5 font-bold text-slate-900"><span class="grid place-items-center h-7 w-7 rounded-lg bg-indigo-600 text-white text-sm font-bold">1</span>Información del Estudiante</span>
+        <span class="flex items-center gap-3">
+          <span data-chip="sec-1" class="rounded-full px-2.5 py-0.5 text-xs font-semibold bg-amber-50 ring-1 ring-amber-200 text-amber-700">3 obligatorios vacíos</span>
+          <svg class="flecha h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-width="2" d="m6 9 6 6 6-6"/></svg>
+        </span>
+      </button>
+      <div class="acc-body px-6 pb-6 grid grid-cols-1 md:grid-cols-2 gap-5 border-t border-slate-100 pt-5">
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1" for="rut">RUT (sin puntos ni guion) <span class="text-red-500">*</span></label>
+          <input id="rut" data-validate="rut" data-required="1" data-label="RUT" placeholder="12345678K"
+                 class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500">
+          <p class="hidden mt-1 text-xs text-red-600" data-error="rut"></p>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1" for="nombre_completo">Nombre Completo <span class="text-red-500">*</span></label>
+          <input id="nombre_completo" data-required="1" data-label="Nombre completo"
+                 class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500">
+          <p class="hidden mt-1 text-xs text-red-600" data-error="nombre_completo"></p>
+        </div>
+        <div class="md:col-span-2">
+          <label class="block text-sm font-medium text-slate-700 mb-1" for="curso">Curso <span class="text-red-500">*</span></label>
+          <select id="curso" data-required="1" data-label="Curso" class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white">
+            <option value="">Seleccionar Curso</option>
+            <option>1° Medio A - 2026</option><option>1° Medio B - 2026</option><option>2° Medio A - 2026</option>
+          </select>
+          <p class="hidden mt-1 text-xs text-red-600" data-error="curso"></p>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1" for="fecha_nacimiento">Fecha de Nacimiento <span class="text-red-500">*</span></label>
+          <input type="date" id="fecha_nacimiento" data-required="1" data-label="Fecha de nacimiento" class="w-full px-3 py-2 rounded-lg border border-slate-300">
+          <p class="hidden mt-1 text-xs text-red-600" data-error="fecha_nacimiento"></p>
+        </div>
+        <div><label class="block text-sm font-medium text-slate-700 mb-1">Sexo</label><select class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white"><option value="">Seleccionar</option><option>Masculino</option><option>Femenino</option></select></div>
+        <div><label class="block text-sm font-medium text-slate-700 mb-1">Nacionalidad</label><input class="w-full px-3 py-2 rounded-lg border border-slate-300"></div>
+        <div><label class="block text-sm font-medium text-slate-700 mb-1">Domicilio</label><input class="w-full px-3 py-2 rounded-lg border border-slate-300"></div>
+        <div><label class="block text-sm font-medium text-slate-700 mb-1">Comuna</label><input class="w-full px-3 py-2 rounded-lg border border-slate-300"></div>
+        <div><label class="block text-sm font-medium text-slate-700 mb-1">Ascendencia Indígena</label><select class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white"><option value="">Seleccionar</option><option>No</option><option>Sí</option></select></div>
+        <div><label class="block text-sm font-medium text-slate-700 mb-1">Etnia</label><input class="w-full px-3 py-2 rounded-lg border border-slate-300"></div>
+        <div><label class="block text-sm font-medium text-slate-700 mb-1">Pertenece al PIE</label><select class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white"><option value="">Seleccionar</option><option>No</option><option>Sí</option></select></div>
+        <div><label class="block text-sm font-medium text-slate-700 mb-1">Ha repetido curso</label><select class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white"><option value="">Seleccionar</option><option>No</option><option>Sí</option></select></div>
+        <div><label class="block text-sm font-medium text-slate-700 mb-1">Estado del Estudiante</label><select class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white"><option value="">Seleccionar</option><option>Activo</option><option>Inactivo</option><option>Egresado</option></select></div>
+        <div><label class="block text-sm font-medium text-slate-700 mb-1">Establecimiento de procedencia</label><input class="w-full px-3 py-2 rounded-lg border border-slate-300"></div>
+      </div>
+    </section>
+
+    <!-- 2 · Padres -->
+    <section id="sec-2" class="acc scroll-mt-24 rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm" data-open="0">
+      <button type="button" class="acc-toggle w-full flex items-center justify-between gap-3 px-6 py-4 text-left">
+        <span class="flex items-center gap-2.5 font-bold text-slate-900"><span class="grid place-items-center h-7 w-7 rounded-lg bg-indigo-600 text-white text-sm font-bold">2</span>Información de los Padres</span>
+        <span class="flex items-center gap-3">
+          <span data-chip="sec-2" class="rounded-full px-2.5 py-0.5 text-xs font-semibold bg-slate-100 ring-1 ring-slate-200 text-slate-500">opcional</span>
+          <svg class="flecha h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-width="2" d="m6 9 6 6 6-6"/></svg>
+        </span>
+      </button>
+      <div class="acc-body px-6 pb-6 grid grid-cols-1 xl:grid-cols-2 gap-5 border-t border-slate-100 pt-5">
+        <div class="rounded-xl ring-1 ring-slate-200 p-4">
+          <p class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Madre</p>
+          <div class="grid grid-cols-1 gap-4">
+            <div><label class="block text-sm font-medium text-slate-700 mb-1">Nombre</label><input data-validate="nombre" class="w-full px-3 py-2 rounded-lg border border-slate-300"></div>
+            <div><label class="block text-sm font-medium text-slate-700 mb-1">RUT</label><input data-validate="rut" class="w-full px-3 py-2 rounded-lg border border-slate-300"><p class="hidden mt-1 text-xs text-red-600"></p></div>
+            <div><label class="block text-sm font-medium text-slate-700 mb-1">Teléfono</label><input class="w-full px-3 py-2 rounded-lg border border-slate-300"></div>
+            <div><label class="block text-sm font-medium text-slate-700 mb-1">Nivel Educacional</label><input class="w-full px-3 py-2 rounded-lg border border-slate-300"></div>
+            <div><label class="block text-sm font-medium text-slate-700 mb-1">Ocupación</label><input class="w-full px-3 py-2 rounded-lg border border-slate-300"></div>
+            <div><label class="block text-sm font-medium text-slate-700 mb-1">Correo Electrónico</label><input data-validate="email" class="w-full px-3 py-2 rounded-lg border border-slate-300"><p class="hidden mt-1 text-xs text-red-600"></p></div>
+          </div>
+        </div>
+        <div class="rounded-xl ring-1 ring-slate-200 p-4">
+          <p class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Padre</p>
+          <div class="grid grid-cols-1 gap-4">
+            <div><label class="block text-sm font-medium text-slate-700 mb-1">Nombre</label><input data-validate="nombre" class="w-full px-3 py-2 rounded-lg border border-slate-300"></div>
+            <div><label class="block text-sm font-medium text-slate-700 mb-1">RUT</label><input data-validate="rut" class="w-full px-3 py-2 rounded-lg border border-slate-300"><p class="hidden mt-1 text-xs text-red-600"></p></div>
+            <div><label class="block text-sm font-medium text-slate-700 mb-1">Teléfono</label><input class="w-full px-3 py-2 rounded-lg border border-slate-300"></div>
+            <div><label class="block text-sm font-medium text-slate-700 mb-1">Nivel Educacional</label><input class="w-full px-3 py-2 rounded-lg border border-slate-300"></div>
+            <div><label class="block text-sm font-medium text-slate-700 mb-1">Ocupación</label><input class="w-full px-3 py-2 rounded-lg border border-slate-300"></div>
+            <div><label class="block text-sm font-medium text-slate-700 mb-1">Correo Electrónico</label><input data-validate="email" class="w-full px-3 py-2 rounded-lg border border-slate-300"><p class="hidden mt-1 text-xs text-red-600"></p></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3 · Apoderado -->
+    <section id="sec-3" class="acc scroll-mt-24 rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm" data-open="0">
+      <button type="button" class="acc-toggle w-full flex items-center justify-between gap-3 px-6 py-4 text-left">
+        <span class="flex items-center gap-2.5 font-bold text-slate-900"><span class="grid place-items-center h-7 w-7 rounded-lg bg-indigo-600 text-white text-sm font-bold">3</span>Información del Apoderado</span>
+        <span class="flex items-center gap-3">
+          <span data-chip="sec-3" class="rounded-full px-2.5 py-0.5 text-xs font-semibold bg-slate-100 ring-1 ring-slate-200 text-slate-500">opcional</span>
+          <svg class="flecha h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-width="2" d="m6 9 6 6 6-6"/></svg>
+        </span>
+      </button>
+      <div class="acc-body px-6 pb-6 grid grid-cols-1 md:grid-cols-2 gap-5 border-t border-slate-100 pt-5">
+        <div><label class="block text-sm font-medium text-slate-700 mb-1">Nombre del Apoderado</label><input data-validate="nombre" class="w-full px-3 py-2 rounded-lg border border-slate-300"></div>
+        <div><label class="block text-sm font-medium text-slate-700 mb-1">RUT</label><input data-validate="rut" class="w-full px-3 py-2 rounded-lg border border-slate-300"><p class="hidden mt-1 text-xs text-red-600"></p></div>
+        <div><label class="block text-sm font-medium text-slate-700 mb-1">Teléfono</label><input class="w-full px-3 py-2 rounded-lg border border-slate-300"></div>
+        <div><label class="block text-sm font-medium text-slate-700 mb-1">Nivel Educacional</label><input class="w-full px-3 py-2 rounded-lg border border-slate-300"></div>
+        <div><label class="block text-sm font-medium text-slate-700 mb-1">Ocupación</label><input class="w-full px-3 py-2 rounded-lg border border-slate-300"></div>
+        <div><label class="block text-sm font-medium text-slate-700 mb-1">Correo Electrónico</label><input data-validate="email" class="w-full px-3 py-2 rounded-lg border border-slate-300"><p class="hidden mt-1 text-xs text-red-600"></p></div>
+        <div><label class="block text-sm font-medium text-slate-700 mb-1">Fecha de Nacimiento apoderado</label><input type="date" class="w-full px-3 py-2 rounded-lg border border-slate-300"></div>
+      </div>
+    </section>
+
+    <!-- 4 · Suplente -->
+    <section id="sec-4" class="acc scroll-mt-24 rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm" data-open="0">
+      <button type="button" class="acc-toggle w-full flex items-center justify-between gap-3 px-6 py-4 text-left">
+        <span class="flex items-center gap-2.5 font-bold text-slate-900"><span class="grid place-items-center h-7 w-7 rounded-lg bg-indigo-600 text-white text-sm font-bold">4</span>Apoderado Suplente</span>
+        <span class="flex items-center gap-3">
+          <span data-chip="sec-4" class="rounded-full px-2.5 py-0.5 text-xs font-semibold bg-slate-100 ring-1 ring-slate-200 text-slate-500">opcional</span>
+          <svg class="flecha h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-width="2" d="m6 9 6 6 6-6"/></svg>
+        </span>
+      </button>
+      <div class="acc-body px-6 pb-6 grid grid-cols-1 md:grid-cols-2 gap-5 border-t border-slate-100 pt-5">
+        <div><label class="block text-sm font-medium text-slate-700 mb-1">Nombre</label><input data-validate="nombre" class="w-full px-3 py-2 rounded-lg border border-slate-300"></div>
+        <div><label class="block text-sm font-medium text-slate-700 mb-1">RUT</label><input data-validate="rut" class="w-full px-3 py-2 rounded-lg border border-slate-300"><p class="hidden mt-1 text-xs text-red-600"></p></div>
+        <div><label class="block text-sm font-medium text-slate-700 mb-1">Parentesco con el estudiante</label><input class="w-full px-3 py-2 rounded-lg border border-slate-300"></div>
+        <div><label class="block text-sm font-medium text-slate-700 mb-1">Teléfono</label><input class="w-full px-3 py-2 rounded-lg border border-slate-300"></div>
+        <div><label class="block text-sm font-medium text-slate-700 mb-1">Nivel Educacional</label><input class="w-full px-3 py-2 rounded-lg border border-slate-300"></div>
+        <div><label class="block text-sm font-medium text-slate-700 mb-1">Ocupación</label><input class="w-full px-3 py-2 rounded-lg border border-slate-300"></div>
+        <div><label class="block text-sm font-medium text-slate-700 mb-1">Correo Electrónico</label><input data-validate="email" class="w-full px-3 py-2 rounded-lg border border-slate-300"><p class="hidden mt-1 text-xs text-red-600"></p></div>
+      </div>
+    </section>
+
+    <!-- 5 · Social y salud -->
+    <section id="sec-5" class="acc scroll-mt-24 rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm" data-open="0">
+      <button type="button" class="acc-toggle w-full flex items-center justify-between gap-3 px-6 py-4 text-left">
+        <span class="flex items-center gap-2.5 font-bold text-slate-900"><span class="grid place-items-center h-7 w-7 rounded-lg bg-indigo-600 text-white text-sm font-bold">5</span>Información Social y de Salud</span>
+        <span class="flex items-center gap-3">
+          <span data-chip="sec-5" class="rounded-full px-2.5 py-0.5 text-xs font-semibold bg-slate-100 ring-1 ring-slate-200 text-slate-500">opcional</span>
+          <svg class="flecha h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-width="2" d="m6 9 6 6 6-6"/></svg>
+        </span>
+      </button>
+      <div class="acc-body px-6 pb-6 grid grid-cols-1 md:grid-cols-2 gap-5 border-t border-slate-100 pt-5">
+        <div><label class="block text-sm font-medium text-slate-700 mb-1">Vive con</label><select class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white"><option>Ambos Padres</option><option>Padre</option><option>Madre</option><option>Otros</option></select></div>
+        <div><label class="block text-sm font-medium text-slate-700 mb-1">Resolución Judicial</label><select class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white"><option>No</option><option>Sí</option></select></div>
+        <div><label class="block text-sm font-medium text-slate-700 mb-1">¿Problemas de salud o alergia?</label><select class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white"><option>No</option><option>Sí</option></select></div>
+        <div><label class="block text-sm font-medium text-slate-700 mb-1">¿Cuál? Especificar</label><input class="w-full px-3 py-2 rounded-lg border border-slate-300"></div>
+        <div><label class="block text-sm font-medium text-slate-700 mb-1">Impedimento para EF</label><select class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white"><option>No</option><option>Sí</option></select></div>
+        <div><label class="block text-sm font-medium text-slate-700 mb-1">Sistema de salud</label><select class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white"><option>Fonasa</option><option>Isapre</option><option>Particular</option></select></div>
+        <div><label class="block text-sm font-medium text-slate-700 mb-1">Seguro salud complementario</label><input class="w-full px-3 py-2 rounded-lg border border-slate-300"></div>
+      </div>
+    </section>
+
+    <!-- 6 · Transporte -->
+    <section id="sec-6" class="acc scroll-mt-24 rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm" data-open="0">
+      <button type="button" class="acc-toggle w-full flex items-center justify-between gap-3 px-6 py-4 text-left">
+        <span class="flex items-center gap-2.5 font-bold text-slate-900"><span class="grid place-items-center h-7 w-7 rounded-lg bg-indigo-600 text-white text-sm font-bold">6</span>Transporte y Otros Aspectos</span>
+        <span class="flex items-center gap-3">
+          <span data-chip="sec-6" class="rounded-full px-2.5 py-0.5 text-xs font-semibold bg-slate-100 ring-1 ring-slate-200 text-slate-500">opcional</span>
+          <svg class="flecha h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-width="2" d="m6 9 6 6 6-6"/></svg>
+        </span>
+      </button>
+      <div class="acc-body px-6 pb-6 grid grid-cols-1 md:grid-cols-2 gap-5 border-t border-slate-100 pt-5">
+        <div><label class="block text-sm font-medium text-slate-700 mb-1">Tipo de transporte</label><input class="w-full px-3 py-2 rounded-lg border border-slate-300"></div>
+        <div><label class="block text-sm font-medium text-slate-700 mb-1">Opta por clases de religión católica</label><select class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white"><option>No</option><option>Sí</option></select></div>
+        <div><label class="block text-sm font-medium text-slate-700 mb-1">Acepta fotografías y/o videos educativos</label><select class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white"><option>No</option><option>Sí</option></select></div>
+        <div><label class="block text-sm font-medium text-slate-700 mb-1">Fecha matrícula</label><input type="date" class="w-full px-3 py-2 rounded-lg border border-slate-300"></div>
+      </div>
+    </section>
+
+    </form>
+  </div>
+</section>
+
+<!-- Barra inferior sticky -->
+<div class="sticky bottom-0 z-30 bg-white/90 backdrop-blur border-t border-slate-200">
+  <div class="mx-auto max-w-6xl px-6 py-3 flex flex-wrap items-center justify-between gap-3">
+    <p class="text-sm text-slate-600"><span id="bar-vacios" class="text-amber-700 font-medium">3 obligatorios por completar</span></p>
+    <div class="flex items-center gap-3">
+      <button type="button" onclick="guardar()" class="w-56 bg-indigo-600 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-indigo-700 transition shadow-sm">Guardar Estudiante</button>
+      <span class="w-56 text-center bg-white ring-1 ring-slate-300 text-slate-400 py-2.5 rounded-xl text-sm font-semibold">Imprimir Estudiante</span>
+    </div>
+  </div>
+</div>
+
+<script>
+// acordeones (independientes; en la implementación real también se abren solos si validas una sección con errores)
+document.querySelectorAll('.acc-toggle').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const acc=btn.closest('.acc');
+    acc.dataset.open=acc.dataset.open==='1'?'0':'1';
+  });
+});
+
+// validación (misma lógica que mockup A)
+function validaRut(v){
+  v=v.replace(/[.\-\s]/g,'').toUpperCase();
+  if(!/^\d{7,8}[0-9K]$/.test(v)) return false;
+  const cuerpo=v.slice(0,-1),dvIn=v.slice(-1);
+  let m=0,s=1;
+  for(let i=cuerpo.length-1;i>=0;i--){s=(s+parseInt(cuerpo[i])*(9-m%6))%11;m++;}
+  return dvIn===(s===0?'0':s===10?'K':String(s-1));
+}
+const RULES={
+  rut:v=>v===''?null:(validaRut(v)?null:'RUT inválido (revisa el dígito verificador)'),
+  email:v=>v===''?null:(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)?null:'Correo inválido'),
+  nombre:v=>v===''?null:(v.trim().split(/\s+/).length>=2?null:'Escribe nombre y apellido')
+};
+const required=[...document.querySelectorAll('[data-required]')];
+function revisa(el){
+  if(el.tagName==='SELECT'){el.classList.toggle('bad',!!(el.dataset.required&&!el.value));return;}
+  const r=RULES[el.dataset.validate];if(!r){if(el.value.trim())el.classList.add('ok');return;}
+  const err=el.closest('div').querySelector('.text-red-600');
+  el.classList.remove('ok','bad');
+  const msg=r(el.value);
+  if(msg){el.classList.add('bad');if(err){err.textContent=msg;err.classList.remove('hidden');}}
+  else{if(el.value.trim())el.classList.add('ok');if(err)err.classList.add('hidden');}
+}
+document.querySelectorAll('[data-validate],[data-required]').forEach(el=>{
+  el.addEventListener('blur',()=>{revisa(el);refresca();});
+  el.addEventListener('input',()=>{el.classList.remove('bad');refresca();});
+});
+
+function refresca(){
+  // chips por sección
+  document.querySelectorAll('.acc').forEach(sec=>{
+    const reqs=[...sec.querySelectorAll('[data-required]')];
+    const vacios=reqs.filter(r=>!r.value.trim()||r.classList.contains('bad')).length;
+    const ch=sec.querySelector('[data-chip]');
+    ch.className='rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 '+
+      (reqs.length&&vacios>0?'bg-amber-50 ring-amber-200 text-amber-700'
+      :(reqs.length?'bg-emerald-50 ring-emerald-200 text-emerald-700':'bg-slate-100 ring-slate-200 text-slate-500'));
+    ch.textContent=reqs.length?(vacios===0?'completa':vacios+' obligatorios vacíos'):'opcional';
+  });
+  // progreso %
+  const tot=required.length;
+  const ok=required.filter(r=>r.value.trim()&&!r.classList.contains('bad')).length;
+  const pct=Math.round(ok/tot*100);
+  document.getElementById('pct-bar').style.width=pct+'%';
+  document.getElementById('pct-txt').textContent=pct+'%';
+  const restan=tot-ok;
+  const b=document.getElementById('bar-vacios');
+  b.textContent=restan===0?'Todo listo para guardar':restan+' obligatorios por completar';
+  b.className=restan===0?'text-emerald-700 font-medium':'text-amber-700 font-medium';
+}
+refresca();
+
+// Guardar: abre secciones con errores + resumen navegable
+function guardar(){
+  document.querySelectorAll('#ficha [data-validate]').forEach(revisa);
+  const bads=required.filter(r=>!r.value.trim()||r.classList.contains('bad'));
+  const box=document.getElementById('error-summary');
+  if(bads.length===0){box.classList.add('hidden');alert('(demo) Se guardaría el estudiante ✔');return;}
+  bads.forEach(r=>r.closest('.acc').dataset.open='1');
+  document.getElementById('err-count').textContent=bads.length;
+  const ul=document.getElementById('err-list');ul.innerHTML='';
+  bads.forEach(el=>{
+    const li=document.createElement('li');const a=document.createElement('a');
+    a.textContent='• '+(el.dataset.label||'Campo')+(el.classList.contains('bad')?' (valor inválido)':' (vacío)');
+    a.className='text-red-700 underline decoration-red-300 hover:text-red-900';
+    a.onclick=e=>{e.preventDefault();el.scrollIntoView({behavior:'smooth',block:'center'});el.focus({preventScroll:true});};
+    li.appendChild(a);ul.appendChild(li);
+  });
+  box.classList.remove('hidden');
+  box.scrollIntoView({behavior:'smooth',block:'start'});
+  box.focus();
+}
+</script>
+</body>
+</html>
