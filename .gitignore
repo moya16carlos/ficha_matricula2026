@@ -25,6 +25,9 @@ liceospc_ficha2025
 
 # Node (config legados del proyecto)
 node_modules/
+# Skills de agentes AI (ui-ux-pro-max etc.) — herramientas locales, no código de la app
+.opencode/
+.agents/
 
 # Artefactos locales
 deploy/
