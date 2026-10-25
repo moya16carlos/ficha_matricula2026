@@ -3,7 +3,7 @@
 
 {% block content %}
 <section class="py-7">
-  <div class="mx-auto max-w-5xl px-6">
+  <div class="mx-auto max-w-7xl px-6">
 
     <!-- Breadcrumb + encabezado -->
     <nav class="flex items-center gap-1.5 text-xs text-slate-400 mb-3">
@@ -14,7 +14,7 @@
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 class="text-2xl font-bold text-slate-900">Nuevo Estudiante</h1>
-          <p class="text-sm text-slate-500 mt-0.5">Registra la información básica, familiar y de salud en una sola ficha. Los campos con <span class="text-red-500 font-bold">*</span> son obligatorios.</p>
+          <p class="text-sm text-slate-500 mt-0.5">La ficha se valida campo por campo mientras escribes. Los campos con <span class="text-red-500 font-bold">*</span> son obligatorios.</p>
         </div>
         <div class="inline-flex items-center gap-2 rounded-xl bg-white ring-1 ring-slate-200 px-4 py-2.5 text-sm text-slate-600">
           <svg class="h-4 w-4 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -40,446 +40,547 @@
       </div>
     {% endif %}
 
-    <!-- Selector de año visible -->
-    <div class="mb-4 rounded-xl bg-white ring-1 ring-slate-200 shadow-sm p-4">
-      <form method="get" class="flex flex-wrap items-end gap-3">
-        <div>
-          <label class="block text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">Año visible</label>
-          <select name="anio" class="w-44 px-3 py-2 rounded-lg border border-slate-300 bg-slate-50 focus:ring-2 focus:ring-indigo-500"
-                  onchange="this.form.submit()">
-            {% if anios_visibles %}
-              {% for y in anios_visibles %}
-                <option value="{{ y }}" {% if anio_sel|stringformat:'s' == y|stringformat:'s' %}selected{% endif %}>{{ y }}</option>
-              {% endfor %}
-            {% else %}
-              <option value="">— Sin años configurados —</option>
-            {% endif %}
-          </select>
-        </div>
-        <div class="text-sm text-slate-500 pb-2">
-          Mostrando cursos del año seleccionado y según tus permisos de nivel.
-        </div>
-      </form>
+    <!-- Resumen de errores (navegable; se llena por JS al fallar el guardado) -->
+    <div id="error-summary" role="alert" tabindex="-1"
+         class="hidden mb-6 rounded-2xl ring-1 ring-red-200 bg-red-50 p-5">
+      <h2 class="font-bold text-red-800 flex items-center gap-2">
+        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-width="2" d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/></svg>
+        Hay <span id="err-count">0</span> campo(s) por corregir
+      </h2>
+      <ul id="err-list" class="mt-3 space-y-1.5 text-sm"></ul>
     </div>
 
-    <!-- Índice de secciones (salta directo a la parte que buscas) -->
-    <div class="mb-4 flex flex-wrap gap-2 text-xs font-semibold">
-      <a href="#sec-1" class="rounded-full bg-white ring-1 ring-slate-200 px-3 py-1.5 text-slate-600 hover:bg-indigo-50 hover:ring-indigo-200 hover:text-indigo-700 transition">1 · Estudiante</a>
-      <a href="#sec-2" class="rounded-full bg-white ring-1 ring-slate-200 px-3 py-1.5 text-slate-600 hover:bg-indigo-50 hover:ring-indigo-200 hover:text-indigo-700 transition">2 · Padres</a>
-      <a href="#sec-3" class="rounded-full bg-white ring-1 ring-slate-200 px-3 py-1.5 text-slate-600 hover:bg-indigo-50 hover:ring-indigo-200 hover:text-indigo-700 transition">3 · Apoderado</a>
-      <a href="#sec-4" class="rounded-full bg-white ring-1 ring-slate-200 px-3 py-1.5 text-slate-600 hover:bg-indigo-50 hover:ring-indigo-200 hover:text-indigo-700 transition">4 · Apoderado suplente</a>
-      <a href="#sec-5" class="rounded-full bg-white ring-1 ring-slate-200 px-3 py-1.5 text-slate-600 hover:bg-indigo-50 hover:ring-indigo-200 hover:text-indigo-700 transition">5 · Social y salud</a>
-      <a href="#sec-6" class="rounded-full bg-white ring-1 ring-slate-200 px-3 py-1.5 text-slate-600 hover:bg-indigo-50 hover:ring-indigo-200 hover:text-indigo-700 transition">6 · Transporte y otros</a>
-    </div>
+    <div class="flex gap-6 items-start">
 
-    <div class="rounded-2xl ring-1 ring-slate-200 bg-white shadow-sm">
+      <!-- Índice lateral con progreso por sección -->
+      <aside class="hidden lg:block w-64 shrink-0 sticky top-6">
+        <div class="rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm p-3">
+          <p class="px-3 pt-1 pb-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">Secciones</p>
+          <a href="#sec-1" class="spy block rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-slate-50">
+            <span class="flex items-center justify-between gap-2"><span>1 · Estudiante</span>
+              <span data-chip="sec-1" class="rounded-full px-2 py-0.5 text-[10px] font-bold bg-amber-100 text-amber-700">3</span></span>
+          </a>
+          <a href="#sec-2" class="spy block rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-slate-50">
+            <span class="flex items-center justify-between gap-2"><span>2 · Padres</span>
+              <span data-chip="sec-2" class="rounded-full px-2 py-0.5 text-[10px] font-bold bg-slate-100 text-slate-500">opcional</span></span>
+          </a>
+          <a href="#sec-3" class="spy block rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-slate-50">
+            <span class="flex items-center justify-between gap-2"><span>3 · Apoderado</span>
+              <span data-chip="sec-3" class="rounded-full px-2 py-0.5 text-[10px] font-bold bg-slate-100 text-slate-500">opcional</span></span>
+          </a>
+          <a href="#sec-4" class="spy block rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-slate-50">
+            <span class="flex items-center justify-between gap-2"><span>4 · Apod. suplente</span>
+              <span data-chip="sec-4" class="rounded-full px-2 py-0.5 text-[10px] font-bold bg-slate-100 text-slate-500">opcional</span></span>
+          </a>
+          <a href="#sec-5" class="spy block rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-slate-50">
+            <span class="flex items-center justify-between gap-2"><span>5 · Social y salud</span>
+              <span data-chip="sec-5" class="rounded-full px-2 py-0.5 text-[10px] font-bold bg-slate-100 text-slate-500">opcional</span></span>
+          </a>
+          <a href="#sec-6" class="spy block rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-slate-50">
+            <span class="flex items-center justify-between gap-2"><span>6 · Transporte</span>
+              <span data-chip="sec-6" class="rounded-full px-2 py-0.5 text-[10px] font-bold bg-slate-100 text-slate-500">opcional</span></span>
+          </a>
+          <div class="mt-2 border-t border-slate-100 px-3 pt-3 pb-1 text-xs text-slate-500">
+            Faltan <strong id="total-vacios" class="text-slate-800">0</strong> obligatorios en total
+          </div>
+        </div>
+      </aside>
+
+      <main class="flex-1 min-w-0 space-y-5">
+
+      <!-- Selector de año visible -->
+      <div class="rounded-xl bg-white ring-1 ring-slate-200 shadow-sm p-4">
+        <form method="get" class="flex flex-wrap items-end gap-3">
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">Año visible</label>
+            <select name="anio" class="w-44 px-3 py-2 rounded-lg border border-slate-300 bg-slate-50 focus:ring-2 focus:ring-indigo-500"
+                    onchange="this.form.submit()">
+              {% if anios_visibles %}
+                {% for y in anios_visibles %}
+                  <option value="{{ y }}" {% if anio_sel|stringformat:'s' == y|stringformat:'s' %}selected{% endif %}>{{ y }}</option>
+                {% endfor %}
+              {% else %}
+                <option value="">— Sin años configurados —</option>
+              {% endif %}
+            </select>
+          </div>
+          <div class="text-sm text-slate-500 pb-2">
+            Mostrando cursos del año seleccionado y según tus permisos de nivel.
+          </div>
+        </form>
+      </div>
+
+      <!-- Índice rápido solo para móvil (el lateral no existe en pantallas chicas) -->
+      <div class="lg:hidden mb-1 flex flex-wrap gap-2 text-xs font-semibold">
+        <a href="#sec-1" class="rounded-full bg-white ring-1 ring-slate-200 px-3 py-1.5 text-slate-600 hover:bg-indigo-50 hover:ring-indigo-200 hover:text-indigo-700 transition">1 · Estudiante</a>
+        <a href="#sec-2" class="rounded-full bg-white ring-1 ring-slate-200 px-3 py-1.5 text-slate-600 hover:bg-indigo-50 hover:ring-indigo-200 hover:text-indigo-700 transition">2 · Padres</a>
+        <a href="#sec-3" class="rounded-full bg-white ring-1 ring-slate-200 px-3 py-1.5 text-slate-600 hover:bg-indigo-50 hover:ring-indigo-200 hover:text-indigo-700 transition">3 · Apoderado</a>
+        <a href="#sec-4" class="rounded-full bg-white ring-1 ring-slate-200 px-3 py-1.5 text-slate-600 hover:bg-indigo-50 hover:ring-indigo-200 hover:text-indigo-700 transition">4 · Apoderado suplente</a>
+        <a href="#sec-5" class="rounded-full bg-white ring-1 ring-slate-200 px-3 py-1.5 text-slate-600 hover:bg-indigo-50 hover:ring-indigo-200 hover:text-indigo-700 transition">5 · Social y salud</a>
+        <a href="#sec-6" class="rounded-full bg-white ring-1 ring-slate-200 px-3 py-1.5 text-slate-600 hover:bg-indigo-50 hover:ring-indigo-200 hover:text-indigo-700 transition">6 · Transporte y otros</a>
+      </div>
+
       <!-- IMPORTANTE: postea a la MISMA vista 'nuevo_estudiante' -->
       <form id="newStudentForm"
             method="POST"
             action="{% url 'nuevo_estudiante' %}"
-            class="p-6 md:p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+            class="space-y-5">
         {% csrf_token %}
         <!-- Mantener el filtro de año al guardar -->
         <input type="hidden" name="anio_filtro" value="{{ anio_sel }}"/>
         <!-- Enviar quién matricula (el backend igual lo setea) -->
         <input type="hidden" name="quien_matricula" value="{{ quien_matricula }}"/>
 
-        <!-- ========== Información del Estudiante ========== -->
-        <div id="sec-1" class="md:col-span-2 pt-2 scroll-mt-24">
-          <h2 class="flex items-center gap-2.5 text-lg font-bold text-slate-800">
-            <span class="h-7 w-7 rounded-lg bg-indigo-600 text-white text-sm font-bold flex items-center justify-center">1</span>
-            Información del Estudiante
-          </h2>
-        </div>
+        <!-- ========== 1 · Información del Estudiante ========== -->
+        <section id="sec-1" class="scroll-mt-6 rounded-2xl ring-1 ring-slate-200 bg-white shadow-sm">
+          <div class="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-b border-slate-100">
+            <h2 class="flex items-center gap-2.5 text-lg font-bold text-slate-900">
+              <span class="h-7 w-7 rounded-lg bg-indigo-600 text-white text-sm font-bold flex items-center justify-center">1</span>
+              Información del Estudiante
+            </h2>
+            <span data-chip2="sec-1" class="rounded-full px-2.5 py-0.5 text-xs font-semibold bg-amber-50 ring-1 ring-amber-200 text-amber-700"></span>
+          </div>
+          <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
 
-        <div>
-          <label for="rut" class="block text-sm font-medium text-slate-700 mb-1">RUT (sin puntos ni guion)</label>
-          <input type="text" id="rut" name="rut" placeholder="Ej: 12345678K" required
-                 oninput="this.value=this.value.replace(/[^0-9kK]/g,'').toUpperCase()"
-                 class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500">
-        </div>
+            <div>
+              <label for="rut" class="block text-sm font-medium text-slate-700 mb-1">RUT (sin puntos ni guion) <span class="text-red-500">*</span></label>
+              <input type="text" id="rut" name="rut" placeholder="Ej: 12345678K" required
+                     data-required="1" data-label="RUT" data-validate="rut"
+                     oninput="this.value=this.value.replace(/[^0-9kK]/g,'').toUpperCase()"
+                     class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500">
+              <p class="hidden mt-1 text-xs text-red-600" data-error="rut"></p>
+            </div>
 
-        <div>
-          <label for="nombre_completo" class="block text-sm font-medium text-slate-700 mb-1">Nombre Completo</label>
-          <input type="text" id="nombre_completo" name="nombre_completo" required
-                 class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500">
-        </div>
+            <div>
+              <label for="nombre_completo" class="block text-sm font-medium text-slate-700 mb-1">Nombre Completo <span class="text-red-500">*</span></label>
+              <input type="text" id="nombre_completo" name="nombre_completo" required
+                     data-required="1" data-label="Nombre completo"
+                     class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500">
+              <p class="hidden mt-1 text-xs text-red-600" data-error="nombre_completo"></p>
+            </div>
 
-        <div class="md:col-span-2">
-          <label for="curso" class="block text-sm font-medium text-slate-700 mb-1">Curso</label>
-          <select id="curso" name="curso" required
-                  class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500">
-            <option value="">Seleccionar Curso</option>
-            {% for c in cursos %}
-              <option value="{{ c.id }}">
-                {{ c.nivel }}{% if c.letra %} {{ c.letra }}{% endif %} - {{ c.anio }}
-              </option>
-            {% empty %}
-              <option value="">— No hay cursos para el año seleccionado o no tienes permiso en este nivel —</option>
-            {% endfor %}
-          </select>
-          {% if not cursos %}
-            <p class="mt-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
-              No hay cursos disponibles para el año {{ anio_sel }}. Verifica la visibilidad de cursos o tus permisos de nivel (Básica/Media).
-            </p>
-          {% endif %}
-        </div>
+            <div class="md:col-span-2">
+              <label for="curso" class="block text-sm font-medium text-slate-700 mb-1">Curso <span class="text-red-500">*</span></label>
+              <select id="curso" name="curso" required
+                      data-required="1" data-label="Curso"
+                      class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500">
+                <option value="">Seleccionar Curso</option>
+                {% for c in cursos %}
+                  <option value="{{ c.id }}">
+                    {{ c.nivel }}{% if c.letra %} {{ c.letra }}{% endif %} - {{ c.anio }}
+                  </option>
+                {% empty %}
+                  <option value="">— No hay cursos para el año seleccionado o no tienes permiso en este nivel —</option>
+                {% endfor %}
+              </select>
+              <p class="hidden mt-1 text-xs text-red-600" data-error="curso"></p>
+              {% if not cursos %}
+                <p class="mt-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+                  No hay cursos disponibles para el año {{ anio_sel }}. Verifica la visibilidad de cursos o tus permisos de nivel (Básica/Media).
+                </p>
+              {% endif %}
+            </div>
 
-        <div>
-          <label for="fecha_nacimiento" class="block text-sm font-medium text-slate-700 mb-1">Fecha de Nacimiento</label>
-          <input type="date" id="fecha_nacimiento" name="fecha_nacimiento" required
-                 class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500">
-        </div>
+            <div>
+              <label for="fecha_nacimiento" class="block text-sm font-medium text-slate-700 mb-1">Fecha de Nacimiento <span class="text-red-500">*</span></label>
+              <input type="date" id="fecha_nacimiento" name="fecha_nacimiento" required
+                     data-required="1" data-label="Fecha de nacimiento"
+                     class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500">
+              <p class="hidden mt-1 text-xs text-red-600" data-error="fecha_nacimiento"></p>
+            </div>
 
-        <div>
-          <label for="sexo" class="block text-sm font-medium text-slate-700 mb-1">Sexo</label>
-          <select id="sexo" name="sexo"
-                  class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500">
-            <option value="">Seleccionar</option>
-            <option>Masculino</option>
-            <option>Femenino</option>
-          </select>
-        </div>
+            <div>
+              <label for="sexo" class="block text-sm font-medium text-slate-700 mb-1">Sexo</label>
+              <select id="sexo" name="sexo"
+                      class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500">
+                <option value="">Seleccionar</option>
+                <option>Masculino</option>
+                <option>Femenino</option>
+              </select>
+            </div>
 
-        <div>
-          <label for="nacionalidad" class="block text-sm font-medium text-slate-700 mb-1">Nacionalidad</label>
-          <input type="text" id="nacionalidad" name="nacionalidad"
-                 class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500">
-        </div>
+            <div>
+              <label for="nacionalidad" class="block text-sm font-medium text-slate-700 mb-1">Nacionalidad</label>
+              <input type="text" id="nacionalidad" name="nacionalidad"
+                     class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500">
+            </div>
 
-        <div>
-          <label for="domicilio" class="block text-sm font-medium text-slate-700 mb-1">Domicilio</label>
-          <input type="text" id="domicilio" name="domicilio"
-                 class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500">
-        </div>
+            <div>
+              <label for="domicilio" class="block text-sm font-medium text-slate-700 mb-1">Domicilio</label>
+              <input type="text" id="domicilio" name="domicilio"
+                     class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500">
+            </div>
 
-        <div>
-          <label for="comuna" class="block text-sm font-medium text-slate-700 mb-1">Comuna</label>
-          <input type="text" id="comuna" name="comuna"
-                 class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500">
-        </div>
+            <div>
+              <label for="comuna" class="block text-sm font-medium text-slate-700 mb-1">Comuna</label>
+              <input type="text" id="comuna" name="comuna"
+                     class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500">
+            </div>
 
-        <div>
-          <label for="ascendencia_indigena" class="block text-sm font-medium text-slate-700 mb-1">Ascendencia Indígena</label>
-          <select id="ascendencia_indigena" name="ascendencia_indigena"
-                  class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500">
-            <option value="">Seleccionar</option>
-            <option>No</option>
-            <option>Sí</option>
-          </select>
-        </div>
+            <div>
+              <label for="ascendencia_indigena" class="block text-sm font-medium text-slate-700 mb-1">Ascendencia Indígena</label>
+              <select id="ascendencia_indigena" name="ascendencia_indigena"
+                      class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500">
+                <option value="">Seleccionar</option>
+                <option>No</option>
+                <option>Sí</option>
+              </select>
+            </div>
 
-        <div>
-          <label for="etnia" class="block text-sm font-medium text-slate-700 mb-1">Etnia</label>
-          <input type="text" id="etnia" name="etnia"
-                 class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500">
-        </div>
+            <div>
+              <label for="etnia" class="block text-sm font-medium text-slate-700 mb-1">Etnia</label>
+              <input type="text" id="etnia" name="etnia"
+                     class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500">
+            </div>
 
-        <div>
-          <label for="pertenece_al_pie" class="block text-sm font-medium text-slate-700 mb-1">Pertenece al PIE</label>
-          <select id="pertenece_al_pie" name="pertenece_al_pie"
-                  class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500">
-            <option value="">Seleccionar</option>
-            <option>No</option>
-            <option>Sí</option>
-          </select>
-        </div>
+            <div>
+              <label for="pertenece_al_pie" class="block text-sm font-medium text-slate-700 mb-1">Pertenece al PIE</label>
+              <select id="pertenece_al_pie" name="pertenece_al_pie"
+                      class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500">
+                <option value="">Seleccionar</option>
+                <option>No</option>
+                <option>Sí</option>
+              </select>
+            </div>
 
-        <div>
-          <label for="ha_repetido_curso" class="block text-sm font-medium text-slate-700 mb-1">Ha repetido curso</label>
-          <select id="ha_repetido_curso" name="ha_repetido_curso"
-                  class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500">
-            <option value="">Seleccionar</option>
-            <option>No</option>
-            <option>Sí</option>
-          </select>
-        </div>
+            <div>
+              <label for="ha_repetido_curso" class="block text-sm font-medium text-slate-700 mb-1">Ha repetido curso</label>
+              <select id="ha_repetido_curso" name="ha_repetido_curso"
+                      class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500">
+                <option value="">Seleccionar</option>
+                <option>No</option>
+                <option>Sí</option>
+              </select>
+            </div>
 
-        <div>
-          <label for="estado" class="block text-sm font-medium text-slate-700 mb-1">Estado del Estudiante</label>
-          <select id="estado" name="estado"
-                  class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500">
-            <option value="">Seleccionar Estado</option>
-            <option>Activo</option>
-            <option>Inactivo</option>
-            <option>Egresado</option>
-          </select>
-        </div>
+            <div>
+              <label for="estado" class="block text-sm font-medium text-slate-700 mb-1">Estado del Estudiante</label>
+              <select id="estado" name="estado"
+                      class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500">
+                <option value="">Seleccionar Estado</option>
+                <option>Activo</option>
+                <option>Inactivo</option>
+                <option>Egresado</option>
+              </select>
+            </div>
 
-        <div>
-          <label for="de_donde_viene" class="block text-sm font-medium text-slate-700 mb-1">Establecimiento de procedencia</label>
-          <input type="text" id="de_donde_viene" name="de_donde_viene"
-                 class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500">
-        </div>
+            <div>
+              <label for="de_donde_viene" class="block text-sm font-medium text-slate-700 mb-1">Establecimiento de procedencia</label>
+              <input type="text" id="de_donde_viene" name="de_donde_viene"
+                     class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500">
+            </div>
+          </div>
+        </section>
 
-        <!-- ========== Padres ========== -->
-        <div id="sec-2" class="md:col-span-2 pt-4 scroll-mt-24">
-          <h2 class="flex items-center gap-2.5 text-lg font-bold text-slate-800"><span class="h-7 w-7 rounded-lg bg-indigo-600 text-white text-sm font-bold flex items-center justify-center">2</span>Información de los Padres</h2>
-        </div>
+        <!-- ========== 2 · Información de los Padres ========== -->
+        <section id="sec-2" class="scroll-mt-6 rounded-2xl ring-1 ring-slate-200 bg-white shadow-sm">
+          <div class="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-b border-slate-100">
+            <h2 class="flex items-center gap-2.5 text-lg font-bold text-slate-900"><span class="h-7 w-7 rounded-lg bg-indigo-600 text-white text-sm font-bold flex items-center justify-center">2</span>Información de los Padres</h2>
+            <span data-chip2="sec-2" class="rounded-full px-2.5 py-0.5 text-xs font-semibold bg-slate-100 ring-1 ring-slate-200 text-slate-500"></span>
+          </div>
+          <div class="p-6 grid grid-cols-1 xl:grid-cols-2 gap-5">
+            <div class="rounded-xl ring-1 ring-slate-200 p-4">
+              <p class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Madre</p>
+              <div class="grid grid-cols-1 gap-4">
+                <div>
+                  <label for="nombre_madre" class="block text-sm font-medium text-slate-700 mb-1">Nombre de la Madre</label>
+                  <input type="text" id="nombre_madre" name="nombre_madre"
+                         class="w-full px-3 py-2 rounded-lg border border-slate-300">
+                </div>
+                <div>
+                  <label for="rut_madre" class="block text-sm font-medium text-slate-700 mb-1">RUT de la Madre</label>
+                  <input type="text" id="rut_madre" name="rut_madre" data-validate="rut"
+                         class="w-full px-3 py-2 rounded-lg border border-slate-300">
+                  <p class="hidden mt-1 text-xs text-red-600" data-error="rut_madre"></p>
+                </div>
+                <div>
+                  <label for="telefono_madre" class="block text-sm font-medium text-slate-700 mb-1">Teléfono de la Madre</label>
+                  <input type="text" id="telefono_madre" name="telefono_madre"
+                         class="w-full px-3 py-2 rounded-lg border border-slate-300">
+                </div>
+                <div>
+                  <label for="nivel_educacional_madre" class="block text-sm font-medium text-slate-700 mb-1">Nivel Educacional de la Madre</label>
+                  <input type="text" id="nivel_educacional_madre" name="nivel_educacional_madre"
+                         class="w-full px-3 py-2 rounded-lg border border-slate-300">
+                </div>
+                <div>
+                  <label for="ocupacion_madre" class="block text-sm font-medium text-slate-700 mb-1">Ocupación de la Madre</label>
+                  <input type="text" id="ocupacion_madre" name="ocupacion_madre"
+                         class="w-full px-3 py-2 rounded-lg border border-slate-300">
+                </div>
+                <div>
+                  <label for="email_madre" class="block text-sm font-medium text-slate-700 mb-1">Correo Electrónico de la Madre</label>
+                  <input type="text" id="email_madre" name="email_madre" data-validate="email"
+                         class="w-full px-3 py-2 rounded-lg border border-slate-300">
+                  <p class="hidden mt-1 text-xs text-red-600" data-error="email_madre"></p>
+                </div>
+              </div>
+            </div>
+            <div class="rounded-xl ring-1 ring-slate-200 p-4">
+              <p class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Padre</p>
+              <div class="grid grid-cols-1 gap-4">
+                <div>
+                  <label for="nombre_padre" class="block text-sm font-medium text-slate-700 mb-1">Nombre del Padre</label>
+                  <input type="text" id="nombre_padre" name="nombre_padre"
+                         class="w-full px-3 py-2 rounded-lg border border-slate-300">
+                </div>
+                <div>
+                  <label for="rut_padre" class="block text-sm font-medium text-slate-700 mb-1">RUT del Padre</label>
+                  <input type="text" id="rut_padre" name="rut_padre" data-validate="rut"
+                         class="w-full px-3 py-2 rounded-lg border border-slate-300">
+                  <p class="hidden mt-1 text-xs text-red-600" data-error="rut_padre"></p>
+                </div>
+                <div>
+                  <label for="telefono_padre" class="block text-sm font-medium text-slate-700 mb-1">Teléfono del Padre</label>
+                  <input type="text" id="telefono_padre" name="telefono_padre"
+                         class="w-full px-3 py-2 rounded-lg border border-slate-300">
+                </div>
+                <div>
+                  <label for="nivel_educacional_padre" class="block text-sm font-medium text-slate-700 mb-1">Nivel Educacional del Padre</label>
+                  <input type="text" id="nivel_educacional_padre" name="nivel_educacional_padre"
+                         class="w-full px-3 py-2 rounded-lg border border-slate-300">
+                </div>
+                <div>
+                  <label for="ocupacion_padre" class="block text-sm font-medium text-slate-700 mb-1">Ocupación del Padre</label>
+                  <input type="text" id="ocupacion_padre" name="ocupacion_padre"
+                         class="w-full px-3 py-2 rounded-lg border border-slate-300">
+                </div>
+                <div>
+                  <label for="email_padre" class="block text-sm font-medium text-slate-700 mb-1">Correo Electrónico del Padre</label>
+                  <input type="text" id="email_padre" name="email_padre" data-validate="email"
+                         class="w-full px-3 py-2 rounded-lg border border-slate-300">
+                  <p class="hidden mt-1 text-xs text-red-600" data-error="email_padre"></p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
 
-        <!-- Madre -->
-        <div>
-          <label for="nombre_madre" class="block text-sm font-medium text-slate-700 mb-1">Nombre de la Madre</label>
-          <input type="text" id="nombre_madre" name="nombre_madre"
-                 class="w-full px-3 py-2 rounded-lg border border-slate-300">
-        </div>
-        <div>
-          <label for="rut_madre" class="block text-sm font-medium text-slate-700 mb-1">RUT de la Madre</label>
-          <input type="text" id="rut_madre" name="rut_madre"
-                 class="w-full px-3 py-2 rounded-lg border border-slate-300">
-        </div>
-        <div>
-          <label for="telefono_madre" class="block text-sm font-medium text-slate-700 mb-1">Teléfono de la Madre</label>
-          <input type="text" id="telefono_madre" name="telefono_madre"
-                 class="w-full px-3 py-2 rounded-lg border border-slate-300">
-        </div>
-        <div>
-          <label for="nivel_educacional_madre" class="block text-sm font-medium text-slate-700 mb-1">Nivel Educacional de la Madre</label>
-          <input type="text" id="nivel_educacional_madre" name="nivel_educacional_madre"
-                 class="w-full px-3 py-2 rounded-lg border border-slate-300">
-        </div>
-        <div>
-          <label for="ocupacion_madre" class="block text-sm font-medium text-slate-700 mb-1">Ocupación de la Madre</label>
-          <input type="text" id="ocupacion_madre" name="ocupacion_madre"
-                 class="w-full px-3 py-2 rounded-lg border border-slate-300">
-        </div>
-        <div>
-          <label for="email_madre" class="block text-sm font-medium text-slate-700 mb-1">Correo Electrónico de la Madre</label>
-          <input type="text" id="email_madre" name="email_madre"
-                 class="w-full px-3 py-2 rounded-lg border border-slate-300">
-        </div>
+        <!-- ========== 3 · Apoderado Titular ========== -->
+        <section id="sec-3" class="scroll-mt-6 rounded-2xl ring-1 ring-slate-200 bg-white shadow-sm">
+          <div class="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-b border-slate-100">
+            <h2 class="flex items-center gap-2.5 text-lg font-bold text-slate-900"><span class="h-7 w-7 rounded-lg bg-indigo-600 text-white text-sm font-bold flex items-center justify-center">3</span>Información del Apoderado</h2>
+            <span data-chip2="sec-3" class="rounded-full px-2.5 py-0.5 text-xs font-semibold bg-slate-100 ring-1 ring-slate-200 text-slate-500"></span>
+          </div>
+          <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div>
+              <label for="nombre_apoderado" class="block text-sm font-medium text-slate-700 mb-1">Nombre del Apoderado</label>
+              <input type="text" id="nombre_apoderado" name="nombre_apoderado"
+                     class="w-full px-3 py-2 rounded-lg border border-slate-300">
+            </div>
+            <div>
+              <label for="rut_apoderado" class="block text-sm font-medium text-slate-700 mb-1">RUT del Apoderado</label>
+              <input type="text" id="rut_apoderado" name="rut_apoderado" data-validate="rut"
+                     class="w-full px-3 py-2 rounded-lg border border-slate-300">
+              <p class="hidden mt-1 text-xs text-red-600" data-error="rut_apoderado"></p>
+            </div>
+            <div>
+              <label for="telefono_apoderado" class="block text-sm font-medium text-slate-700 mb-1">Teléfono del Apoderado</label>
+              <input type="text" id="telefono_apoderado" name="telefono_apoderado"
+                     class="w-full px-3 py-2 rounded-lg border border-slate-300">
+            </div>
+            <div>
+              <label for="nivel_educacional_apoderado" class="block text-sm font-medium text-slate-700 mb-1">Nivel Educacional del Apoderado</label>
+              <input type="text" id="nivel_educacional_apoderado" name="nivel_educacional_apoderado"
+                     class="w-full px-3 py-2 rounded-lg border border-slate-300">
+            </div>
+            <div>
+              <label for="ocupacion_apoderado" class="block text-sm font-medium text-slate-700 mb-1">Ocupación del Apoderado</label>
+              <input type="text" id="ocupacion_apoderado" name="ocupacion_apoderado"
+                     class="w-full px-3 py-2 rounded-lg border border-slate-300">
+            </div>
+            <div>
+              <label for="email_apoderado" class="block text-sm font-medium text-slate-700 mb-1">Correo Electrónico del Apoderado</label>
+              <input type="text" id="email_apoderado" name="email_apoderado" data-validate="email"
+                     class="w-full px-3 py-2 rounded-lg border border-slate-300">
+              <p class="hidden mt-1 text-xs text-red-600" data-error="email_apoderado"></p>
+            </div>
+            <div>
+              <label for="fecha_nacimiento_apoderado" class="block text-sm font-medium text-slate-700 mb-1">Fecha de Nacimiento apoderado</label>
+              <input type="date" id="fecha_nacimiento_apoderado" name="fecha_nacimiento_apoderado"
+                     class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500">
+            </div>
+          </div>
+        </section>
 
-        <!-- Padre -->
-        <div>
-          <label for="nombre_padre" class="block text-sm font-medium text-slate-700 mb-1">Nombre del Padre</label>
-          <input type="text" id="nombre_padre" name="nombre_padre"
-                 class="w-full px-3 py-2 rounded-lg border border-slate-300">
-        </div>
-        <div>
-          <label for="rut_padre" class="block text-sm font-medium text-slate-700 mb-1">RUT del Padre</label>
-          <input type="text" id="rut_padre" name="rut_padre"
-                 class="w-full px-3 py-2 rounded-lg border border-slate-300">
-        </div>
-        <div>
-          <label for="telefono_padre" class="block text-sm font-medium text-slate-700 mb-1">Teléfono del Padre</label>
-          <input type="text" id="telefono_padre" name="telefono_padre"
-                 class="w-full px-3 py-2 rounded-lg border border-slate-300">
-        </div>
-        <div>
-          <label for="nivel_educacional_padre" class="block text-sm font-medium text-slate-700 mb-1">Nivel Educacional del Padre</label>
-          <input type="text" id="nivel_educacional_padre" name="nivel_educacional_padre"
-                 class="w-full px-3 py-2 rounded-lg border border-slate-300">
-        </div>
-        <div>
-          <label for="ocupacion_padre" class="block text-sm font-medium text-slate-700 mb-1">Ocupación del Padre</label>
-          <input type="text" id="ocupacion_padre" name="ocupacion_padre"
-                 class="w-full px-3 py-2 rounded-lg border border-slate-300">
-        </div>
-        <div>
-          <label for="email_padre" class="block text-sm font-medium text-slate-700 mb-1">Correo Electrónico del Padre</label>
-          <input type="text" id="email_padre" name="email_padre"
-                 class="w-full px-3 py-2 rounded-lg border border-slate-300">
-        </div>
+        <!-- ========== 4 · Apoderado Suplente ========== -->
+        <section id="sec-4" class="scroll-mt-6 rounded-2xl ring-1 ring-slate-200 bg-white shadow-sm">
+          <div class="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-b border-slate-100">
+            <h2 class="flex items-center gap-2.5 text-lg font-bold text-slate-900"><span class="h-7 w-7 rounded-lg bg-indigo-600 text-white text-sm font-bold flex items-center justify-center">4</span>Apoderado Suplente</h2>
+            <span data-chip2="sec-4" class="rounded-full px-2.5 py-0.5 text-xs font-semibold bg-slate-100 ring-1 ring-slate-200 text-slate-500"></span>
+          </div>
+          <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div>
+              <label for="nombre_apoderado_suplente" class="block text-sm font-medium text-slate-700 mb-1">Nombre</label>
+              <input type="text" id="nombre_apoderado_suplente" name="nombre_apoderado_suplente"
+                     class="w-full px-3 py-2 rounded-lg border border-slate-300">
+            </div>
+            <div>
+              <label for="rut_apoderado_suplente" class="block text-sm font-medium text-slate-700 mb-1">RUT</label>
+              <input type="text" id="rut_apoderado_suplente" name="rut_apoderado_suplente" data-validate="rut"
+                     class="w-full px-3 py-2 rounded-lg border border-slate-300">
+              <p class="hidden mt-1 text-xs text-red-600" data-error="rut_apoderado_suplente"></p>
+            </div>
+            <div>
+              <label for="parentesco_apoderado_suplente" class="block text-sm font-medium text-slate-700 mb-1">Parentesco con el estudiante</label>
+              <input type="text" id="parentesco_apoderado_suplente" name="parentesco_apoderado_suplente"
+                     class="w-full px-3 py-2 rounded-lg border border-slate-300">
+            </div>
+            <div>
+              <label for="telefono_apoderado_suplente" class="block text-sm font-medium text-slate-700 mb-1">Teléfono</label>
+              <input type="text" id="telefono_apoderado_suplente" name="telefono_apoderado_suplente"
+                     class="w-full px-3 py-2 rounded-lg border border-slate-300">
+            </div>
+            <div>
+              <label for="nivel_educacional_apoderado_suplente" class="block text-sm font-medium text-slate-700 mb-1">Nivel Educacional</label>
+              <input type="text" id="nivel_educacional_apoderado_suplente" name="nivel_educacional_apoderado_suplente"
+                     class="w-full px-3 py-2 rounded-lg border border-slate-300">
+            </div>
+            <div>
+              <label for="ocupacion_apoderado_suplente" class="block text-sm font-medium text-slate-700 mb-1">Ocupación</label>
+              <input type="text" id="ocupacion_apoderado_suplente" name="ocupacion_apoderado_suplente"
+                     class="w-full px-3 py-2 rounded-lg border border-slate-300">
+            </div>
+            <div>
+              <label for="email_apoderado_suplente" class="block text-sm font-medium text-slate-700 mb-1">Correo Electrónico</label>
+              <input type="text" id="email_apoderado_suplente" name="email_apoderado_suplente" data-validate="email"
+                     class="w-full px-3 py-2 rounded-lg border border-slate-300">
+              <p class="hidden mt-1 text-xs text-red-600" data-error="email_apoderado_suplente"></p>
+            </div>
+          </div>
+        </section>
 
-        <!-- ========== Apoderado Titular ========== -->
-        <div id="sec-3" class="md:col-span-2 pt-2 scroll-mt-24">
-          <h2 class="flex items-center gap-2.5 text-lg font-bold text-slate-800"><span class="h-7 w-7 rounded-lg bg-indigo-600 text-white text-sm font-bold flex items-center justify-center">3</span>Información del Apoderado</h2>
-        </div>
+        <!-- ========== 5 · Social / Salud ========== -->
+        <section id="sec-5" class="scroll-mt-6 rounded-2xl ring-1 ring-slate-200 bg-white shadow-sm">
+          <div class="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-b border-slate-100">
+            <h2 class="flex items-center gap-2.5 text-lg font-bold text-slate-900"><span class="h-7 w-7 rounded-lg bg-indigo-600 text-white text-sm font-bold flex items-center justify-center">5</span>Información Social y de Salud</h2>
+            <span data-chip2="sec-5" class="rounded-full px-2.5 py-0.5 text-xs font-semibold bg-slate-100 ring-1 ring-slate-200 text-slate-500"></span>
+          </div>
+          <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div>
+              <label for="vive_con" class="block text-sm font-medium text-slate-700 mb-1">Vive con</label>
+              <select id="vive_con" name="vive_con"
+                      class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500">
+                <option>Ambos Padres</option>
+                <option>Padre</option>
+                <option>Madre</option>
+                <option>Otros</option>
+              </select>
+            </div>
 
-        <div>
-          <label for="nombre_apoderado" class="block text-sm font-medium text-slate-700 mb-1">Nombre del Apoderado</label>
-          <input type="text" id="nombre_apoderado" name="nombre_apoderado"
-                 class="w-full px-3 py-2 rounded-lg border border-slate-300">
-        </div>
-        <div>
-          <label for="rut_apoderado" class="block text-sm font-medium text-slate-700 mb-1">RUT del Apoderado</label>
-          <input type="text" id="rut_apoderado" name="rut_apoderado"
-                 class="w-full px-3 py-2 rounded-lg border border-slate-300">
-        </div>
-        <div>
-          <label for="telefono_apoderado" class="block text-sm font-medium text-slate-700 mb-1">Teléfono del Apoderado</label>
-          <input type="text" id="telefono_apoderado" name="telefono_apoderado"
-                 class="w-full px-3 py-2 rounded-lg border border-slate-300">
-        </div>
-        <div>
-          <label for="nivel_educacional_apoderado" class="block text-sm font-medium text-slate-700 mb-1">Nivel Educacional del Apoderado</label>
-          <input type="text" id="nivel_educacional_apoderado" name="nivel_educacional_apoderado"
-                 class="w-full px-3 py-2 rounded-lg border border-slate-300">
-        </div>
-        <div>
-          <label for="ocupacion_apoderado" class="block text-sm font-medium text-slate-700 mb-1">Ocupación del Apoderado</label>
-          <input type="text" id="ocupacion_apoderado" name="ocupacion_apoderado"
-                 class="w-full px-3 py-2 rounded-lg border border-slate-300">
-        </div>
-        <div>
-          <label for="email_apoderado" class="block text-sm font-medium text-slate-700 mb-1">Correo Electrónico del Apoderado</label>
-          <input type="text" id="email_apoderado" name="email_apoderado"
-                 class="w-full px-3 py-2 rounded-lg border border-slate-300">
-        </div>
-        <div>
-          <label for="fecha_nacimiento_apoderado" class="block text-sm font-medium text-slate-700 mb-1">Fecha de Nacimiento apoderado</label>
-          <input type="date" id="fecha_nacimiento_apoderado" name="fecha_nacimiento_apoderado"
-                 class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500">
-        </div>
+            <div>
+              <label for="resolucion_judicial" class="block text-sm font-medium text-slate-700 mb-1">Resolución Judicial</label>
+              <select id="resolucion_judicial" name="resolucion_judicial"
+                      class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500">
+                <option>No</option>
+                <option>Sí</option>
+              </select>
+            </div>
 
-        <!-- ========== Apoderado Suplente ========== -->
-        <div id="sec-4" class="md:col-span-2 pt-2 scroll-mt-24">
-          <h2 class="flex items-center gap-2.5 text-lg font-bold text-slate-800"><span class="h-7 w-7 rounded-lg bg-indigo-600 text-white text-sm font-bold flex items-center justify-center">4</span>Apoderado Suplente</h2>
-        </div>
+            <div>
+              <label for="problemas_salud" class="block text-sm font-medium text-slate-700 mb-1">¿Problemas de salud o alergia?</label>
+              <select id="problemas_salud" name="problemas_salud"
+                      class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500">
+                <option>No</option>
+                <option>Sí</option>
+              </select>
+            </div>
 
-        <div>
-          <label for="nombre_apoderado_suplente" class="block text-sm font-medium text-slate-700 mb-1">Nombre</label>
-          <input type="text" id="nombre_apoderado_suplente" name="nombre_apoderado_suplente"
-                 class="w-full px-3 py-2 rounded-lg border border-slate-300">
-        </div>
-        <div>
-          <label for="rut_apoderado_suplente" class="block text-sm font-medium text-slate-700 mb-1">RUT</label>
-          <input type="text" id="rut_apoderado_suplente" name="rut_apoderado_suplente"
-                 class="w-full px-3 py-2 rounded-lg border border-slate-300">
-        </div>
-        <div>
-          <label for="parentesco_apoderado_suplente" class="block text-sm font-medium text-slate-700 mb-1">Parentesco con el estudiante</label>
-          <input type="text" id="parentesco_apoderado_suplente" name="parentesco_apoderado_suplente"
-                 class="w-full px-3 py-2 rounded-lg border border-slate-300">
-        </div>
-        <div>
-          <label for="telefono_apoderado_suplente" class="block text-sm font-medium text-slate-700 mb-1">Teléfono</label>
-          <input type="text" id="telefono_apoderado_suplente" name="telefono_apoderado_suplente"
-                 class="w-full px-3 py-2 rounded-lg border border-slate-300">
-        </div>
-        <div>
-          <label for="nivel_educacional_apoderado_suplente" class="block text-sm font-medium text-slate-700 mb-1">Nivel Educacional</label>
-          <input type="text" id="nivel_educacional_apoderado_suplente" name="nivel_educacional_apoderado_suplente"
-                 class="w-full px-3 py-2 rounded-lg border border-slate-300">
-        </div>
-        <div>
-          <label for="ocupacion_apoderado_suplente" class="block text-sm font-medium text-slate-700 mb-1">Ocupación</label>
-          <input type="text" id="ocupacion_apoderado_suplente" name="ocupacion_apoderado_suplente"
-                 class="w-full px-3 py-2 rounded-lg border border-slate-300">
-        </div>
-        <div>
-          <label for="email_apoderado_suplente" class="block text-sm font-medium text-slate-700 mb-1">Correo Electrónico</label>
-          <input type="text" id="email_apoderado_suplente" name="email_apoderado_suplente"
-                 class="w-full px-3 py-2 rounded-lg border border-slate-300">
-        </div>
+            <div>
+              <label for="descripcion_problemas_salud" class="block text-sm font-medium text-slate-700 mb-1">¿Cuál? Especificar</label>
+              <input type="text" id="descripcion_problemas_salud" name="descripcion_problemas_salud"
+                     class="w-full px-3 py-2 rounded-lg border border-slate-300">
+            </div>
 
-        <!-- ========== Social / Salud ========== -->
-        <div id="sec-5" class="md:col-span-2 pt-2 scroll-mt-24">
-          <h2 class="flex items-center gap-2.5 text-lg font-bold text-slate-800"><span class="h-7 w-7 rounded-lg bg-indigo-600 text-white text-sm font-bold flex items-center justify-center">5</span>Información Social y de Salud</h2>
-        </div>
+            <div>
+              <label for="impide_educacion_fisica" class="block text-sm font-medium text-slate-700 mb-1">Impedimento para EF</label>
+              <select id="impide_educacion_fisica" name="impide_educacion_fisica"
+                      class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500">
+                <option>No</option>
+                <option>Sí</option>
+              </select>
+            </div>
 
-        <div>
-          <label for="vive_con" class="block text-sm font-medium text-slate-700 mb-1">Vive con</label>
-          <select id="vive_con" name="vive_con"
-                  class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500">
-            <option>Ambos Padres</option>
-            <option>Padre</option>
-            <option>Madre</option>
-            <option>Otros</option>
-          </select>
-        </div>
+            <div>
+              <label for="sistema_salud" class="block text-sm font-medium text-slate-700 mb-1">Sistema de salud</label>
+              <select id="sistema_salud" name="sistema_salud"
+                      class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500">
+                <option>Fonasa</option>
+                <option>Isapre</option>
+                <option>Particular</option>
+              </select>
+            </div>
+            <div>
+              <label for="seguro_salud_complementario" class="block text-sm font-medium text-slate-700 mb-1">Seguro salud complementario</label>
+              <input type="text" id="seguro_salud_complementario" name="seguro_salud_complementario"
+                     class="w-full px-3 py-2 rounded-lg border border-slate-300">
+            </div>
+          </div>
+        </section>
 
-        <div>
-          <label for="resolucion_judicial" class="block text-sm font-medium text-slate-700 mb-1">Resolución Judicial</label>
-          <select id="resolucion_judicial" name="resolucion_judicial"
-                  class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500">
-            <option>No</option>
-            <option>Sí</option>
-          </select>
-        </div>
+        <!-- ========== 6 · Transporte y Otros ========== -->
+        <section id="sec-6" class="scroll-mt-6 rounded-2xl ring-1 ring-slate-200 bg-white shadow-sm">
+          <div class="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-b border-slate-100">
+            <h2 class="flex items-center gap-2.5 text-lg font-bold text-slate-900"><span class="h-7 w-7 rounded-lg bg-indigo-600 text-white text-sm font-bold flex items-center justify-center">6</span>Transporte y Otros Aspectos</h2>
+            <span data-chip2="sec-6" class="rounded-full px-2.5 py-0.5 text-xs font-semibold bg-slate-100 ring-1 ring-slate-200 text-slate-500"></span>
+          </div>
+          <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div>
+              <label for="tipo_transporte" class="block text-sm font-medium text-slate-700 mb-1">Tipo de transporte</label>
+              <input type="text" id="tipo_transporte" name="tipo_transporte"
+                     class="w-full px-3 py-2 rounded-lg border border-slate-300">
+            </div>
 
-        <div>
-          <label for="problemas_salud" class="block text-sm font-medium text-slate-700 mb-1">¿Problemas de salud o alergia?</label>
-          <select id="problemas_salud" name="problemas_salud"
-                  class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500">
-            <option>No</option>
-            <option>Sí</option>
-          </select>
-        </div>
+            <div>
+              <label for="opta_religion" class="block text-sm font-medium text-slate-700 mb-1">Opta por clases de religión católica</label>
+              <select id="opta_religion" name="opta_religion"
+                      class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500">
+                <option value="0">No</option>
+                <option value="1">Sí</option>
+              </select>
+            </div>
 
-        <div>
-          <label for="descripcion_problemas_salud" class="block text-sm font-medium text-slate-700 mb-1">¿Cuál? Especificar</label>
-          <input type="text" id="descripcion_problemas_salud" name="descripcion_problemas_salud"
-                 class="w-full px-3 py-2 rounded-lg border border-slate-300">
-        </div>
+            <div>
+              <label for="acepta_fotografias" class="block text-sm font-medium text-slate-700 mb-1">Acepta fotografías y/o videos educativos</label>
+              <select id="acepta_fotografias" name="acepta_fotografias"
+                      class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500">
+                <option value="0">No</option>
+                <option value="1">Sí</option>
+              </select>
+            </div>
 
-        <div>
-          <label for="impide_educacion_fisica" class="block text-sm font-medium text-slate-700 mb-1">Impedimento para EF</label>
-          <select id="impide_educacion_fisica" name="impide_educacion_fisica"
-                  class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500">
-            <option>No</option>
-            <option>Sí</option>
-          </select>
-        </div>
-
-        <div>
-          <label for="sistema_salud" class="block text-sm font-medium text-slate-700 mb-1">Sistema de salud</label>
-          <select id="sistema_salud" name="sistema_salud"
-                  class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500">
-            <option>Fonasa</option>
-            <option>Isapre</option>
-            <option>Particular</option>
-          </select>
-        </div>
-        <div>
-          <label for="seguro_salud_complementario" class="block text-sm font-medium text-slate-700 mb-1">Seguro salud complementario</label>
-          <input type="text" id="seguro_salud_complementario" name="seguro_salud_complementario"
-                 class="w-full px-3 py-2 rounded-lg border border-slate-300">
-        </div>
-
-        <!-- ========== Transporte y Otros ========== -->
-        <div id="sec-6" class="md:col-span-2 pt-2 scroll-mt-24">
-          <h2 class="flex items-center gap-2.5 text-lg font-bold text-slate-800"><span class="h-7 w-7 rounded-lg bg-indigo-600 text-white text-sm font-bold flex items-center justify-center">6</span>Transporte y Otros Aspectos</h2>
-        </div>
-
-        <div>
-          <label for="tipo_transporte" class="block text-sm font-medium text-slate-700 mb-1">Tipo de transporte</label>
-          <input type="text" id="tipo_transporte" name="tipo_transporte"
-                 class="w-full px-3 py-2 rounded-lg border border-slate-300">
-        </div>
-
-        <div>
-          <label for="opta_religion" class="block text-sm font-medium text-slate-700 mb-1">Opta por clases de religión católica</label>
-          <select id="opta_religion" name="opta_religion"
-                  class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500">
-            <option value="0">No</option>
-            <option value="1">Sí</option>
-          </select>
-        </div>
-
-        <div>
-          <label for="acepta_fotografias" class="block text-sm font-medium text-slate-700 mb-1">Acepta fotografías y/o videos educativos</label>
-          <select id="acepta_fotografias" name="acepta_fotografias"
-                  class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500">
-            <option value="0">No</option>
-            <option value="1">Sí</option>
-          </select>
-        </div>
-
-        <div>
-          <label for="fecha_matricula" class="block text-sm font-medium text-slate-700 mb-1">Fecha matrícula</label>
-          <input type="date" id="fecha_matricula" name="fecha_matricula"
-                 class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500">
-        </div>
+            <div>
+              <label for="fecha_matricula" class="block text-sm font-medium text-slate-700 mb-1">Fecha matrícula</label>
+              <input type="date" id="fecha_matricula" name="fecha_matricula"
+                     class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500">
+            </div>
+          </div>
+        </section>
 
         <!-- Acciones: fija al fondo mientras llenas la ficha -->
-        <div class="md:col-span-2 -mx-6 px-6 py-3.5 -mb-6 md:-mx-8 md:-mb-8 flex items-center justify-center gap-4
-                    bg-slate-50 border-t border-slate-200 sticky bottom-0 z-30 backdrop-blur rounded-b-2xl">
-          <button id="btn-guardar" type="submit"
-                  class="w-56 bg-indigo-600 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-indigo-700 transition shadow-sm {% if not cursos %}opacity-60 cursor-not-allowed{% endif %}"
-                  {% if not cursos %}disabled{% endif %}>
-            Guardar Estudiante
-          </button>
+        <div class="sticky bottom-0 z-30 rounded-2xl ring-1 ring-slate-200 bg-white/90 backdrop-blur shadow-sm px-6 py-3.5 flex flex-wrap items-center justify-between gap-3">
+          <p class="text-sm text-slate-600">
+            <span id="bar-seccion" class="font-semibold text-slate-800">Sección 1 de 6</span> ·
+            <span id="bar-vacios" class="text-amber-700 font-medium"></span>
+          </p>
+          <div class="flex items-center gap-4">
+            <button id="btn-guardar" type="submit"
+                    class="w-56 bg-indigo-600 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-indigo-700 transition shadow-sm {% if not cursos %}opacity-60 cursor-not-allowed{% endif %}"
+                    {% if not cursos %}disabled{% endif %}>
+              Guardar Estudiante
+            </button>
 
-          <!-- Botón imprimir: empieza oculto -->
-          <a id="btn-imprimir"
-             href="#"
-             class="w-56 text-center bg-white ring-1 ring-slate-300 text-slate-700 py-2.5 rounded-xl text-sm font-semibold hover:bg-slate-50 transition hidden">
-            Imprimir Estudiante
-          </a>
+            <!-- Botón imprimir: empieza oculto -->
+            <a id="btn-imprimir"
+               href="#"
+               class="w-56 text-center bg-white ring-1 ring-slate-300 text-slate-700 py-2.5 rounded-xl text-sm font-semibold hover:bg-slate-50 transition hidden">
+              Imprimir Estudiante
+            </a>
+          </div>
         </div>
 
       </form>
+      </main>
     </div>
   </div>
 </section>
@@ -506,6 +607,9 @@
   if (form) {
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
+
+      // Validación en cliente antes de enviar (resumen navegable)
+      if (typeof validaAntesDeEnviar === 'function' && !validaAntesDeEnviar()) return;
 
       // Si no hay cursos (por permisos o año), no continuar
       const cursoSel = form.querySelector('#curso');
@@ -564,5 +668,110 @@
       }
     });
   }
+</script>
+
+<script>
+  // ===== Ficha guiada: scrollspy, validación on-blur, chips y resumen de errores =====
+  (function () {
+    const links = [...document.querySelectorAll('.spy')];
+    const secs = links.map(a => document.querySelector(a.getAttribute('href')));
+    const seccionDe = el => el.closest('section[id^="sec-"]');
+
+    // --- scrollspy + "Sección X de 6" en la barra inferior ---
+    const spy = () => {
+      const y = 160;
+      let act = secs[0];
+      secs.forEach(s => { if (s && s.getBoundingClientRect().top <= y) act = s; });
+      links.forEach(l => l.classList.toggle('activo', !!act && l.getAttribute('href') === '#' + act.id));
+      if (act) document.getElementById('bar-seccion').textContent = 'Sección ' + act.id.split('-')[1] + ' de 6';
+    };
+    addEventListener('scroll', spy, { passive: true }); spy();
+
+    // --- validadores ---
+    function dvOk(v) {
+      v = v.replace(/[.\-\s]/g, '').toUpperCase();
+      if (!/^\d{7,8}[0-9K]$/.test(v)) return false;
+      const cuerpo = v.slice(0, -1), dvIn = v.slice(-1);
+      let m = 0, s = 1;
+      for (let i = cuerpo.length - 1; i >= 0; i--) { s = (s + parseInt(cuerpo[i]) * (9 - m % 6)) % 11; m++; }
+      return dvIn === (s === 0 ? '0' : s === 10 ? 'K' : String(s - 1));
+    }
+    const RULES = {
+      rut: v => v === '' ? null : (dvOk(v) ? null : 'RUT inválido (revisa el dígito verificador)'),
+      email: v => v === '' ? null : (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? null : 'Correo inválido')
+    };
+
+    function revisa(el) {
+      if (el.tagName === 'SELECT') {
+        el.classList.toggle('bad', !!(el.dataset.required && !el.value));
+        return;
+      }
+      const r = RULES[el.dataset.validate];
+      if (!r) return;
+      const err = el.closest('div').querySelector('[data-error="' + el.id + '"]');
+      el.classList.remove('ok', 'bad');
+      const msg = r(el.value);
+      if (msg) { el.classList.add('bad'); if (err) { err.textContent = msg; err.classList.remove('hidden'); } }
+      else { if (el.value.trim()) el.classList.add('ok'); if (err) err.classList.add('hidden'); }
+    }
+    window.__revisaFicha = revisa;
+
+    // --- chips por sección + totales ---
+    function refresca() {
+      let total = 0;
+      secs.forEach(sec => {
+        const reqs = [...sec.querySelectorAll('[data-required]')];
+        const vacios = reqs.filter(r => !r.value.trim() || r.classList.contains('bad')).length;
+        total += vacios;
+        const chipTxt = !reqs.length ? 'opcional'
+          : (vacios === 0 ? 'completa' : vacios + ' obligatorios vacíos');
+        const chipCls = !reqs.length ? 'bg-slate-100 ring-slate-200 text-slate-500'
+          : (vacios > 0 ? 'bg-amber-50 ring-amber-200 text-amber-700' : 'bg-emerald-50 ring-emerald-200 text-emerald-700');
+        document.querySelectorAll('[data-chip="' + sec.id + '"],[data-chip2="' + sec.id + '"]').forEach(ch => {
+          ch.className = 'rounded-full ring-1 font-semibold text-xs px-2.5 py-0.5 ' + chipCls;
+          ch.textContent = chipTxt;
+        });
+      });
+      document.getElementById('total-vacios').textContent = total;
+      const b = document.getElementById('bar-vacios');
+      b.textContent = total === 0 ? 'Todo listo para guardar' : total + ' obligatorios por completar';
+      b.className = total === 0 ? 'text-emerald-700 font-medium' : 'text-amber-700 font-medium';
+    }
+    document.querySelectorAll('#newStudentForm [data-validate], #newStudentForm [data-required]').forEach(el => {
+      el.addEventListener('blur', () => { revisa(el); refresca(); });
+      el.addEventListener('input', () => { el.classList.remove('bad'); refresca(); });
+      el.addEventListener('change', () => { revisa(el); refresca(); });
+    });
+    refresca();
+
+    // --- resumen de errores navegable ---
+    function muestraResumen(bads) {
+      const box = document.getElementById('error-summary');
+      if (!bads.length) { box.classList.add('hidden'); return true; }
+      document.getElementById('err-count').textContent = bads.length;
+      const ul = document.getElementById('err-list'); ul.innerHTML = '';
+      bads.forEach(el => {
+        const lbl = el.closest('div').querySelector('label');
+        const li = document.createElement('li'); const a = document.createElement('a');
+        a.textContent = '• ' + (lbl ? lbl.textContent.replace('*', '').trim() : 'Campo') +
+          (el.classList.contains('bad') ? ' (valor inválido)' : ' (vacío)');
+        a.className = 'text-red-700 underline decoration-red-300 hover:text-red-900';
+        a.onclick = e => { e.preventDefault(); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.focus({ preventScroll: true }); };
+        li.appendChild(a); ul.appendChild(li);
+      });
+      box.classList.remove('hidden');
+      box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      box.focus();
+      return false;
+    }
+
+    // Se llama desde el listener de submit ANTES del envío AJAX
+    window.validaAntesDeEnviar = function () {
+      document.querySelectorAll('#newStudentForm [data-validate]').forEach(revisa);
+      const bads = [...document.querySelectorAll('#newStudentForm [data-required]')]
+        .filter(r => !r.value.trim() || r.classList.contains('bad'));
+      return muestraResumen(bads);
+    };
+  })();
 </script>
 {% endblock %}
