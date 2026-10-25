@@ -1,0 +1,14 @@
+# Dependencias para DESARROLLO LOCAL (fuera de Docker).
+# No incluye mysqlclient porque requiere librerías del cliente MySQL
+# para compilar en macOS; en el contenedor sí se instala (requirements.txt).
+#
+# Uso:  .venv/bin/pip install -r requirements-local.txt
+Django==5.2.18
+asgiref==3.8.1
+chardet==5.2.0
+pillow==13.0.0
+python-dotenv==1.2.4
+reportlab==5.1.0
+sqlparse==0.5.1
+tzdata==2024.2
+whitenoise==6.12.0

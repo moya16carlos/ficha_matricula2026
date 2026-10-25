@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+{% block title %}Estudiantes {{ anio }} · Liceo Municipal San Pedro{% endblock %}
+{% block content %}
+
+<main class="max-w-7xl mx-auto px-6 py-7">
+  <!-- Breadcrumb -->
+  <nav class="flex items-center gap-1.5 text-xs text-slate-400 mb-3">
+    <a href="{% url 'home' %}" class="hover:text-indigo-600">Inicio</a><span>/</span>
+    <span class="text-slate-600 font-medium">Matrículas {{ anio }}</span>
+  </nav>
+
+  <!-- Encabezado -->
+  <div class="flex flex-wrap items-end justify-between gap-4 mb-5">
+    <div>
+      <div class="flex items-center gap-3">
+        <h1 class="text-2xl font-bold text-slate-900">Matrículas {{ anio }}</h1>
+        <span class="rounded-full bg-indigo-50 ring-1 ring-indigo-200 px-2.5 py-0.5 text-xs font-semibold text-indigo-700">Año académico</span>
+      </div>
+      <p class="text-sm text-slate-500 mt-1">
+        Clic en el nombre para abrir la ficha · cambia el curso sin salir de la tabla.
+        Sin nivel ⇒ matrículas sin curso asignado en el año.
+      </p>
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
+      <span class="rounded-full bg-white ring-1 ring-slate-200 px-3.5 py-1.5 text-xs font-medium text-slate-700 shadow-sm">
+        Total <b>{{ total_count }}</b>
+      </span>
+      {% if prov_count %}
+        {% if prov_filter %}
+          <span class="rounded-full bg-amber-100 ring-1 ring-amber-300 px-3.5 py-1.5 text-xs font-medium text-amber-800 shadow-sm">
+            ⚠ RUT provisionales: {{ prov_count }} (filtro activo) ·
+            <a href="?anio={{ anio }}" class="underline font-semibold">ver todos</a>
+          </span>
+        {% else %}
+          <a href="?anio={{ anio }}&provisionales=1"
+             class="rounded-full bg-amber-100 ring-1 ring-amber-300 px-3.5 py-1.5 text-xs font-semibold text-amber-800 shadow-sm hover:bg-amber-200 transition">
+            ⚠ RUT provisionales ({{ prov_count }}) → cola de cambio
+          </a>
+        {% endif %}
+      {% endif %}
+      <span class="rounded-full bg-slate-100 ring-1 ring-slate-200 px-3.5 py-1.5 text-xs font-medium text-slate-600 shadow-sm">
+        Sin nivel ({{ sin_nivel_count }})
+      </span>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <form method="get" class="bg-white border border-slate-200 rounded-xl shadow-sm p-4 mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+    <div>
+      <label class="block text-xs font-medium text-slate-500 mb-1" for="anio">Año académico</label>
+      <select name="anio" id="anio" class="border bg-gray-100 text-black rounded-lg w-full px-3 py-2">
+        {% for y in years %}
+          <option value="{{ y }}" {% if y == anio %}selected{% endif %}>{{ y }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="block text-xs font-medium text-slate-500 mb-1" for="curso">Curso</label>
+      <select name="curso" id="curso" class="border bg-gray-100 text-black rounded-lg w-full px-3 py-2">
+        <option value="" {% if curso_id == '' %}selected{% endif %}>— Todos los cursos —</option>
+        {% for c in cursos %}
+          <option value="{{ c.id }}" {% if curso_id == c.id|stringformat:"s" %}selected{% endif %}>
+            {{ c.nivel }}{% if c.letra %} {{ c.letra }}{% endif %} ({{ c.n_est }})
+          </option>
+        {% endfor %}
+        <option value="none" {% if curso_id == 'none' %}selected{% endif %}>Sin nivel ({{ sin_nivel_count }})</option>
+      </select>
+    </div>
+    <div class="md:col-span-1">
+      <label class="block text-xs font-medium text-slate-500 mb-1" for="q">Buscar (nombre o RUT)</label>
+      <input type="text" name="q" id="q" value="{{ q }}"
+             class="border bg-gray-100 text-black rounded-lg w-full px-3 py-2
+                    font-mono tracking-tight" placeholder="Nombre o RUT…">
+    </div>
+    <div class="flex items-end">
+      <button type="submit"
+              class="w-full rounded-lg bg-indigo-600 hover:bg-indigo-700 px-4 py-2 text-sm font-semibold
+                     text-white transition">Filtrar</button>
+    </div>
+  </form>
+
+  <!-- Tabla -->
+  <div class="bg-white ring-1 ring-slate-200 rounded-2xl shadow-sm overflow-hidden">
+    <table class="min-w-full divide-y divide-slate-200 text-sm">
+      <thead class="bg-slate-50 border-b border-slate-200 text-[11px] uppercase tracking-wide text-slate-500">
+        <tr>
+          <th class="px-4 py-3 text-left font-semibold">Estudiante</th>
+          <th class="px-4 py-3 text-left font-semibold">RUT</th>
+          <th class="px-4 py-3 text-left font-semibold">Curso <span class="normal-case font-normal lowercase text-slate-400">(edita aquí)</span></th>
+          <th class="px-4 py-3 text-left font-semibold">Estado</th>
+          <th class="px-4 py-3 text-left font-semibold">Fecha matrícula</th>
+          <th class="px-4 py-3 text-right font-semibold">Acciones</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        {% for ma in matriculas %}
+          <tr class="hover:bg-slate-50 transition">
+            <td class="px-4 py-3">
+              <span class="font-medium text-slate-800">{{ ma.estudiante.nombre_completo }}</span>
+              <div class="text-xs text-slate-400">ID #{{ ma.estudiante_id }}</div>
+            </td>
+            <td class="px-4 py-3 text-slate-600 font-mono">
+              {{ ma.estudiante.rut }}
+              {% if ma.pk in prov_ids %}
+                <span class="ml-1 text-[10px] text-amber-700 bg-amber-100 rounded-md px-1.5 py-0.5 font-semibold">RUT prov.</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3">
+              <select data-rut="{{ ma.estudiante.rut|urlencode }}" data-anio="{{ anio }}"
+                      data-original="{{ ma.curso_id|default_if_none:'' }}"
+                      class="js-curso rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 hover:border-indigo-400 focus:border-indigo-500">
+                {% if not ma.curso %}
+                  <option value="" selected>— Sin nivel —</option>
+                {% endif %}
+                {% for c in cursos %}
+                  {% if c.id != 'none' and c.nivel != 'Por Asignar' and c.nivel != 'Egresados' %}
+                    <option value="{{ c.id }}"
+                      {% if ma.curso_id == c.id %}selected{% endif %}>
+                      {{ c.nivel }}{% if c.letra %} {{ c.letra }}{% endif %} ({{ c.n_est }})
+                    </option>
+                  {% endif %}
+                {% endfor %}
+              </select>
+            </td>
+            <td class="px-4 py-3">
+              {% if ma.estado == 'Activo' %}
+                <span class="text-xs text-emerald-700 bg-emerald-100 rounded-md px-2 py-0.5">Activo</span>
+              {% elif ma.estado == 'Egresado' %}
+                <span class="text-xs text-indigo-700 bg-indigo-100 rounded-md px-2 py-0.5">Egresado</span>
+              {% else %}
+                <span class="text-xs text-slate-500 bg-slate-100 rounded-md px-2 py-0.5">{{ ma.estado|default:'—' }}</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3 text-slate-500">
+              {% if ma.fecha_matricula %}{{ ma.fecha_matricula|date:"d-m-Y" }}{% else %}—{% endif %}
+            </td>
+            <td class="px-4 py-3">
+              <div class="flex gap-1.5">
+                <a href="{% url 'detalles_estudiante' ma.estudiante_id %}"
+                   class="rounded-lg bg-slate-100 hover:bg-slate-200 px-2 py-1 text-xs font-medium text-slate-700">Ficha</a>
+                <a href="{% url 'imprimir_estudiante' ma.estudiante.rut %}?anio={{ anio }}"
+                   class="rounded-lg bg-indigo-600 hover:bg-indigo-700 px-2 py-1 text-xs font-medium text-white">PDF</a>
+              </div>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="6" class="px-4 py-10 text-center text-slate-400">
+              No hay matrículas {{ anio }} para el filtro actual.
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if page_obj.paginator.num_pages > 1 %}
+  <div class="mt-4 rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm px-4 py-3 flex items-center justify-between bg-slate-50/60">
+    <p class="text-xs text-slate-500">Mostrando la página <b>{{ page_obj.number }}</b> de <b>{{ page_obj.paginator.num_pages }}</b></p>
+    <div class="flex items-center gap-2 text-sm">
+      {% if page_obj.has_previous %}
+        <a href="?{{ params }}&page={{ page_obj.previous_page_number }}"
+           class="rounded-lg bg-white ring-1 ring-slate-200 px-3 py-1.5 text-xs text-slate-700 font-medium hover:bg-slate-50">‹ Anterior</a>
+      {% endif %}
+      {% if page_obj.has_next %}
+        <a href="?{{ params }}&page={{ page_obj.next_page_number }}"
+           class="rounded-lg bg-white ring-1 ring-slate-200 px-3 py-1.5 text-xs text-slate-700 font-medium hover:bg-slate-50">Siguiente ›</a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <p class="mt-4 text-xs text-slate-400">
+    Cambia el curso directamente en la tabla (guarda al instante). Con Ficha/PDF abres al estudiante sin buscarlo de nuevo.
+  </p>
+
+  <form method="post" class="hidden">{% csrf_token %}</form>
+  <script>
+    function getCookieCsrf(name) {
+      const m = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+      return m ? m.pop() : '';
+    }
+    document.querySelectorAll('select.js-curso').forEach((sel) => {
+      sel.addEventListener('change', async () => {
+        const fd = new FormData();
+        fd.append('rut', sel.dataset.rut);
+        fd.append('anio', sel.dataset.anio);
+        fd.append('curso_id', sel.value);
+        const res = await fetch('{% url 'asignar_curso_en_anio' %}', {
+          method: 'POST',
+          body: fd,
+          headers: {
+            'X-CSRFToken': getCookieCsrf('csrftoken'),
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.ok !== true) {
+          sel.value = sel.dataset.original || '';
+          alert(data.error || 'No se pudo cambiar el curso.');
+          return;
+        }
+        sel.dataset.original = sel.value;
+        sel.classList.add('ring-2', 'ring-emerald-400');
+        setTimeout(() => sel.classList.remove('ring-2', 'ring-emerald-400'), 1200);
+      });
+    });
+  </script>
+</main>
+
+{% endblock %}

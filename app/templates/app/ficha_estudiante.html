@@ -1,0 +1,762 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Ficha de Estudiante · Matrículas LSP{% endblock %}
+
+{% block content %}
+<section class="py-7">
+  <div class="max-w-5xl mx-auto px-6">
+    <!-- Breadcrumb + encabezado -->
+    <nav class="flex items-center gap-1.5 text-xs text-slate-400 mb-3">
+      <a href="{% url 'home' %}" class="hover:text-indigo-600">Inicio</a><span>/</span>
+      <span class="text-slate-600 font-medium">Ficha de matrícula</span>
+    </nav>
+    <div class="mb-5">
+      <h1 class="text-2xl font-bold text-slate-900">Ficha de Matrícula</h1>
+      <p class="text-slate-500 mt-1 text-sm">Busca por RUT, edita los antecedentes y descarga el PDF firmado en un clic.</p>
+    </div>
+
+    <!-- CONTENEDOR DE AÑO VISIBLE / SELECTOR -->
+    <div class="flex flex-wrap items-center justify-between bg-white p-4 rounded-xl shadow mb-4 ring-1 ring-slate-200">
+      <!-- Izquierda: badge con año -->
+      <div class="flex items-center gap-3">
+        <span id="badge-anio"
+              class="text-sm font-semibold text-indigo-700 bg-indigo-100 px-3 py-1.5 rounded-full shadow-inner">
+          Visualizando: Año actual
+        </span>
+      </div>
+
+      <!-- Derecha: selector de años visibles -->
+      <div id="bloque-selector-anio" class="flex items-center gap-2 hidden">
+        <label for="selector-anio" class="text-sm text-slate-700 font-medium">Cambiar año:</label>
+        <select id="selector-anio"
+                class="border border-slate-300 rounded-lg px-2.5 py-1.5 text-sm focus:ring-2 focus:ring-indigo-500">
+        </select>
+      </div>
+    </div>
+
+    <!-- Mensaje cuando no hay años visibles -->
+    <div id="alert-no-visibles"
+         class="hidden bg-amber-50 border-l-4 border-amber-400 text-amber-700 px-4 py-3 rounded-lg mb-4 text-sm">
+      <strong>No hay años visibles configurados.</strong><br>
+      Se usará el año detectado por los cursos o el año calendario actual.<br>
+      <em>Consejo:</em> cambia el año y vuelve a buscar para ver curso/estado del año escogido.
+    </div>
+
+    <!-- Búsqueda por RUT -->
+    <div class="bg-white/90 rounded-xl shadow-md ring-1 ring-slate-200 p-5 mb-8 backdrop-blur">
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+        <input
+          id="rutBuscar"
+          type="text"
+          placeholder="Ingrese RUT del estudiante"
+          class="w-full sm:w-96 rounded-lg border border-slate-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        />
+        <button
+          type="button"
+          onclick="searchStudent()"
+          class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-5 py-2 rounded-lg transition"
+        >
+          Buscar
+        </button>
+      </div>
+    </div>
+
+    <!-- Formulario -->
+    <form id="newStudentForm" method="POST" action="{% url 'guardar_estudiante' %}" class="space-y-10">
+      {% csrf_token %}
+
+      <!-- Datos del Estudiante -->
+      <div class="bg-white rounded-xl shadow-sm ring-1 ring-slate-200 p-6">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="h-9 w-9 rounded-lg bg-indigo-100 flex items-center justify-center">
+            <svg class="h-5 w-5 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path stroke-width="2" d="M12 4.5v15m7.5-7.5h-15"/>
+            </svg>
+          </div>
+          <h2 class="text-lg font-semibold text-slate-800">Datos del Estudiante</h2>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div>
+            <label class="text-sm font-medium text-slate-700">RUT (sin puntos ni guion)</label>
+            <input id="rut" name="rut" type="text"
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500"/>
+          </div>
+          <div>
+            <label class="text-sm font-medium text-slate-700">Nombre Completo</label>
+            <input id="nombre_completo" name="nombre_completo" type="text"
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500"/>
+          </div>
+          <div>
+            <label class="text-sm font-medium text-slate-700">Curso</label>
+            <select id="curso_id" name="curso_id"
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+              <option value="">Seleccionar Curso</option>
+              {% for c in cursos %}
+                <option value="{{ c.id }}" data-anio="{{ c.anio }}">
+                  {{ c.nivel }}{% if c.letra %} {{ c.letra }}{% endif %} - {{ c.anio }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="text-sm font-medium text-slate-700">Fecha de Nacimiento</label>
+            <input id="fecha_nacimiento" name="fecha_nacimiento" type="date"
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500"/>
+          </div>
+
+          <div>
+            <label class="text-sm font-medium text-slate-700">Sexo</label>
+            <select id="sexo" name="sexo"
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+              <option value="">Seleccionar</option>
+              <option value="Masculino">Masculino</option>
+              <option value="Femenino">Femenino</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-sm font-medium text-slate-700">Nacionalidad</label>
+            <input id="nacionalidad" name="nacionalidad" type="text"
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500"/>
+          </div>
+          <div>
+            <label class="text-sm font-medium text-slate-700">Domicilio</label>
+            <input id="domicilio" name="domicilio" type="text"
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500"/>
+          </div>
+          <div>
+            <label class="text-sm font-medium text-slate-700">Comuna</label>
+            <input id="comuna" name="comuna" type="text"
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500"/>
+          </div>
+
+          <div>
+            <label class="text-sm font-medium text-slate-700">Ascendencia Indígena</label>
+            <select id="ascendencia_indigena" name="ascendencia_indigena"
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+              <option value="">Seleccionar</option><option value="Sí">Sí</option><option value="No">No</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-sm font-medium text-slate-700">Etnia</label>
+            <input id="etnia" name="etnia" type="text"
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500"/>
+          </div>
+          <div>
+            <label class="text-sm font-medium text-slate-700">Pertenece al PIE</label>
+            <select id="pertenece_al_pie" name="pertenece_al_pie"
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+              <option value="">Seleccionar</option><option value="Sí">Sí</option><option value="No">No</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-sm font-medium text-slate-700">Ha repetido curso</label>
+            <select id="ha_repetido_curso" name="ha_repetido_curso"
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+              <option value="">Seleccionar</option><option value="Sí">Sí</option><option value="No">No</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="text-sm font-medium text-slate-700">Estado</label>
+            <select id="estado" name="estado"
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+              <option value="">Seleccionar Estado</option>
+              <option value="Activo">Activo</option><option value="Inactivo">Inactivo</option><option value="Egresado">Egresado</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-sm font-medium text-slate-700">Establecimiento de procedencia</label>
+            <input id="de_donde_viene" name="de_donde_viene" type="text"
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500"/>
+          </div>
+        </div>
+      </div>
+
+      <!-- Padres -->
+      <div class="bg-white rounded-xl shadow-sm ring-1 ring-slate-200 p-6">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="h-9 w-9 rounded-lg bg-amber-100 flex items-center justify-center">
+            <svg class="h-5 w-5 text-amber-600" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path stroke-width="2" d="M12 12a5 5 0 100-10 5 5 0 000 10zm0 2c4.418 0 8 1.79 8 4v2H4v-2c0-2.21 3.582-4 8-4z"/>
+            </svg>
+          </div>
+          <h2 class="text-lg font-semibold text-slate-800">Información de los Padres</h2>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div><label class="text-sm font-medium text-slate-700">Nombre Madre</label>
+            <input id="nombre_madre" name="nombre_madre" type="text" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500"></div>
+          <div><label class="text-sm font-medium text-slate-700">RUT Madre</label>
+            <input id="rut_madre" name="rut_madre" type="text" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500"></div>
+          <div><label class="text-sm font-medium text-slate-700">Teléfono Madre</label>
+            <input id="telefono_madre" name="telefono_madre" type="text" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500"></div>
+          <div><label class="text-sm font-medium text-slate-700">Email Madre</label>
+            <input id="email_madre" name="email_madre" type="text" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500"></div>
+
+          <div><label class="text-sm font-medium text-slate-700">Nivel educacional Madre</label>
+            <input id="nivel_educacional_madre" name="nivel_educacional_madre" type="text" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500"></div>
+          <div><label class="text-sm font-medium text-slate-700">Ocupación Madre</label>
+            <input id="ocupacion_madre" name="ocupacion_madre" type="text" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500"></div>
+
+          <div><label class="text-sm font-medium text-slate-700">Nombre Padre</label>
+            <input id="nombre_padre" name="nombre_padre" type="text" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500"></div>
+          <div><label class="text-sm font-medium text-slate-700">RUT Padre</label>
+            <input id="rut_padre" name="rut_padre" type="text" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500"></div>
+          <div><label class="text-sm font-medium text-slate-700">Teléfono Padre</label>
+            <input id="telefono_padre" name="telefono_padre" type="text" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500"></div>
+          <div><label class="text-sm font-medium text-slate-700">Email Padre</label>
+            <input id="email_padre" name="email_padre" type="text" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500"></div>
+
+          <div><label class="text-sm font-medium text-slate-700">Nivel educacional Padre</label>
+            <input id="nivel_educacional_padre" name="nivel_educacional_padre" type="text" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500"></div>
+          <div><label class="text-sm font-medium text-slate-700">Ocupación Padre</label>
+            <input id="ocupacion_padre" name="ocupacion_padre" type="text" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500"></div>
+        </div>
+      </div>
+
+      <!-- Apoderado -->
+      <div class="bg-white rounded-xl shadow-sm ring-1 ring-slate-200 p-6">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="h-9 w-9 rounded-lg bg-teal-100 flex items-center justify-center">
+            <svg class="h-5 w-5 text-teal-600" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path stroke-width="2" d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/>
+            </svg>
+          </div>
+          <h2 class="text-lg font-semibold text-slate-800">Información del Apoderado</h2>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div><label class="text-sm font-medium text-slate-700">Nombre Apoderado</label>
+            <input id="nombre_apoderado" name="nombre_apoderado" type="text" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500"></div>
+          <div><label class="text-sm font-medium text-slate-700">RUT Apoderado</label>
+            <input id="rut_apoderado" name="rut_apoderado" type="text" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500"></div>
+
+          <div><label class="text-sm font-medium text-slate-700">Teléfono Apoderado</label>
+            <input id="telefono_apoderado" name="telefono_apoderado" type="text" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500"></div>
+          <div>
+            <label class="text-sm font-medium text-slate-700">Fecha de Nacimiento apoderado</label>
+            <input id="fecha_nacimiento_apoderado" name="fecha_nacimiento_apoderado" type="date"
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500"/>
+          </div>
+          <div><label class="text-sm font-medium text-slate-700">Email Apoderado</label>
+            <input id="email_apoderado" name="email_apoderado" type="text" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500"></div>
+
+          <div><label class="text-sm font-medium text-slate-700">Nivel educacional Apoderado</label>
+            <input id="nivel_educacional_apoderado" name="nivel_educacional_apoderado" type="text" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500"></div>
+          <div><label class="text-sm font-medium text-slate-700">Ocupación Apoderado</label>
+            <input id="ocupacion_apoderado" name="ocupacion_apoderado" type="text" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500"></div>
+        </div>
+      </div>
+
+      <!-- Apoderado Suplente -->
+      <div class="bg-white rounded-xl shadow-sm ring-1 ring-slate-200 p-6">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="h-9 w-9 rounded-lg bg-violet-100 flex items-center justify-center">
+            <svg class="h-5 w-5 text-violet-600" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path stroke-width="2" d="M20 21v-2a4 4 0 0 0-3-3.87M8 21v-2a4 4 0 0 1 3-3.87M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/>
+            </svg>
+          </div>
+          <h2 class="text-lg font-semibold text-slate-800">Información del Apoderado Suplente</h2>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div><label class="text-sm font-medium text-slate-700">Nombre Apoderado Suplente</label>
+            <input id="nombre_apoderado_suplente" name="nombre_apoderado_suplente" type="text" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500"></div>
+          <div><label class="text-sm font-medium text-slate-700">RUT Apoderado Suplente</label>
+            <input id="rut_apoderado_suplente" name="rut_apoderado_suplente" type="text" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500"></div>
+          <div><label class="text-sm font-medium text-slate-700">parentesco con el estudiante</label>
+            <input id="parentesco_apoderado_suplente" name="parentesco_apoderado_suplente" type="text" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500"></div>
+          <div><label class="text-sm font-medium text-slate-700">Teléfono Apoderado Suplente</label>
+            <input id="telefono_apoderado_suplente" name="telefono_apoderado_suplente" type="text" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500"></div>
+          <div><label class="text-sm font-medium text-slate-700">Email Apoderado Suplente</label>
+            <input id="email_apoderado_suplente" name="email_apoderado_suplente" type="text" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500"></div>
+
+          <div><label class="text-sm font-medium text-slate-700">Nivel educacional Apoderado Suplente</label>
+            <input id="nivel_educacional_apoderado_suplente" name="nivel_educacional_apoderado_suplente" type="text" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500"></div>
+          <div><label class="text-sm font-medium text-slate-700">Ocupación Apoderado Suplente</label>
+            <input id="ocupacion_apoderado_suplente" name="ocupacion_apoderado_suplente" type="text" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500"></div>
+        </div>
+      </div>
+
+      <!-- Salud / Social -->
+      <div class="bg-white rounded-xl shadow-sm ring-1 ring-slate-200 p-6">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="h-9 w-9 rounded-lg bg-rose-100 flex items-center justify-center">
+            <svg class="h-5 w-5 text-rose-600" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path stroke-width="2" d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l8.84 8.84 8.84-8.84a5.5 5.5 0 000-7.78z"/>
+            </svg>
+          </div>
+          <h2 class="text-lg font-semibold text-slate-800">Salud y Antecedentes</h2>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div>
+            <label class="text-sm font-medium text-slate-700">Vive con</label>
+            <select id="vive_con" name="vive_con" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+              <option value="Ambos Padres">Ambos Padres</option><option value="Padre">Padre</option>
+              <option value="Madre">Madre</option><option value="Otros">Otros</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-sm font-medium text-slate-700">Resolución Judicial</label>
+            <select id="resolucion_judicial" name="resolucion_judicial" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+              <option value="No">No</option><option value="Sí">Sí</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-sm font-medium text-slate-700">¿Problemas de salud o alergias?</label>
+            <select id="problemas_salud" name="problemas_salud" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+              <option value="No">No</option><option value="Sí">Sí</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-sm font-medium text-slate-700">Descripción</label>
+            <input id="descripcion_problemas_salud" name="descripcion_problemas_salud" type="text"
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+          </div>
+          <div>
+            <label class="text-sm font-medium text-slate-700">Impide Educación Física</label>
+            <select id="impide_educacion_fisica" name="impide_educacion_fisica" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+              <option value="No">No</option><option value="Sí">Sí</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-sm font-medium text-slate-700">Sistema de salud</label>
+            <select id="sistema_salud" name="sistema_salud" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+              <option value="Fonasa">Fonasa</option><option value="Isapre">Isapre</option><option value="Particular">Particular</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-sm font-medium text-slate-700">Presenta certificado</label>
+            <select id="presenta_certificado" name="presenta_certificado" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+              <option value="No">No</option><option value="Sí">Sí</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-sm font-medium text-slate-700">Seguro complementario</label>
+            <input id="seguro_salud_complementario" name="seguro_salud_complementario" type="text"
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+          </div>
+        </div>
+      </div>
+
+      <!-- Transporte y otros -->
+      <div class="bg-white rounded-xl shadow-sm ring-1 ring-slate-200 p-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div>
+            <label class="text-sm font-medium text-slate-700">Tipo de transporte</label>
+            <input id="tipo_transporte" name="tipo_transporte" type="text"
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+          </div>
+          <div>
+            <label class="text-sm font-medium text-slate-700">Opta por clases de religión</label>
+            <select id="opta_religion" name="opta_religion"
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+              <option value="false">No</option><option value="true">Sí</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-sm font-medium text-slate-700">Acepta fotografías/videos educativos</label>
+            <select id="acepta_fotografias" name="acepta_fotografias"
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+              <option value="false">No</option><option value="true">Sí</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-sm font-medium text-slate-700">Fecha matrícula</label>
+            <input id="fecha_matricula" name="fecha_matricula" type="date"
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+          </div>
+        </div>
+      </div>
+
+      <!-- Acciones -->
+      <div class="flex flex-col sm:flex-row justify-center items-center gap-4">
+        <button type="submit"
+          class="bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-2 rounded-lg shadow transition">
+          Guardar Estudiante
+        </button>
+        <button id="btn-imprimir" type="button" onclick="imprimirEstudiante()"
+          class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-2 rounded-lg shadow transition hidden">
+          Imprimir Ficha
+        </button>
+      </div>
+    </form>
+  </div>
+</section>
+
+<script>
+  // ===== Estado global del año visible =====
+  let anioActual = null;
+
+  // ----- Helpers de selects/inputs -----
+  function setSelectByValue(id, value, fallbackText) {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    if (value !== null && value !== undefined && value !== '') {
+      sel.value = String(value);
+      if (sel.value === String(value)) return;
+    }
+    if (fallbackText) {
+      const norm = (t) => (t || '').toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+      const target = norm(fallbackText);
+      for (const opt of sel.options) {
+        if (norm(opt.text) === target) { sel.value = opt.value; break; }
+      }
+    }
+  }
+  function setSelectByText(id, txt) {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const target = (txt || '').toString().trim().toLowerCase();
+    for (const opt of sel.options) {
+      if (opt.text.trim().toLowerCase() === target) { sel.value = opt.value; return; }
+    }
+    for (const opt of sel.options) {
+      if (opt.value.trim().toLowerCase() === target) { sel.value = opt.value; return; }
+    }
+  }
+  function setValue(id, val) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (id === 'opta_religion' || id === 'acepta_fotografias') {
+      const v = typeof val === 'boolean' ? String(val) : String(val || '').toLowerCase();
+      el.value = (v === 'true') ? 'true' : (v === 'false' ? 'false' : '');
+      return;
+    }
+    if (['ascendencia_indigena','pertenece_al_pie','ha_repetido_curso','resolucion_judicial','problemas_salud','impide_educacion_fisica','presenta_certificado'].includes(id)) {
+      el.value = typeof val === 'boolean' ? (val ? 'Sí' : 'No') : (val || '');
+      return;
+    }
+    el.value = val || '';
+  }
+
+  // ----- Filtrar cursos por año visible -----
+  function filterCursoOptions() {
+    const sel = document.getElementById('curso_id');
+    if (!sel) return;
+    const options = sel.querySelectorAll('option');
+    options.forEach(opt => {
+      const anio = opt.getAttribute('data-anio');
+      if (!anio) { opt.hidden = false; return; } // "Seleccionar Curso"
+      if (!anioActual) { opt.hidden = false; return; }
+      const visible = parseInt(anio) === parseInt(anioActual);
+      opt.hidden = !visible;
+    });
+    // Limpiar selección si quedó oculta
+    if (sel.selectedOptions.length && sel.selectedOptions[0].hidden) {
+      sel.value = '';
+    }
+  }
+
+  // ----- Poblar selector de años desde cursos (fallback si backend no manda headers) -----
+  function buildYearSelectorFromCursos() {
+    const bloque = document.getElementById('bloque-selector-anio');
+    const sel = document.getElementById('selector-anio');
+    const cursoSel = document.getElementById('curso_id');
+    if (!bloque || !sel || !cursoSel) return;
+
+    const years = new Set();
+    cursoSel.querySelectorAll('option[data-anio]').forEach(o => {
+      const v = parseInt(o.getAttribute('data-anio'), 10);
+      if (!isNaN(v)) years.add(v);
+    });
+    const list = Array.from(years).sort((a,b)=>a-b);
+
+    sel.innerHTML = '';
+    if (list.length) {
+      list.forEach(y=>{
+        const opt = document.createElement('option');
+        opt.value = String(y);
+        opt.textContent = String(y);
+        sel.appendChild(opt);
+      });
+      bloque.classList.remove('hidden');
+    } else {
+      bloque.classList.add('hidden');
+    }
+    return list;
+  }
+
+  // ----- Buscar por RUT (usa headers si existen; si no, usa anioActual/selector) -----
+  async function buscarEstudiantesPorRutAPI(rut, anio = null) {
+    const url = `{% url 'buscar_estudiantes_por_rut' %}?rut=${encodeURIComponent(rut)}${anio ? '&anio=' + anio : ''}`;
+    const res = await fetch(url);
+    const data = await res.json();
+
+    // Extraer metadatos de cabeceras (si el backend los envía)
+    let anioUsado = res.headers.get('X-Anio-Usado');
+    const visiblesHdr = res.headers.get('X-Anios-Visibles') || '';
+    const visibles = visiblesHdr.split(',').filter(Boolean);
+    const fallback = res.headers.get('X-Anio-Fallback') === '1';
+
+    // Si no hay headers, intentamos con el selector/estado actual
+    if (!anioUsado) {
+      const sel = document.getElementById('selector-anio');
+      if (anio)       anioUsado = String(anio);
+      else if (sel && sel.value) anioUsado = sel.value;
+      else if (visibles.length)  anioUsado = visibles[0];
+      else                       anioUsado = String(new Date().getFullYear());
+    }
+
+    // Actualizar badge
+    const badge = document.getElementById('badge-anio');
+    if (badge) badge.textContent = `Visualizando: ${anioUsado}${fallback ? ' (automático)' : ''}`;
+
+    // Construir/pintar selector
+    const bloqueSelector = document.getElementById('bloque-selector-anio');
+    const sel = document.getElementById('selector-anio');
+    if (sel && bloqueSelector) {
+      if (visibles.length) {
+        // Backend entregó años visibles
+        sel.innerHTML = '';
+        visibles.forEach(v=>{
+          const o=document.createElement('option'); o.value=v; o.textContent=v; if (v===anioUsado) o.selected=true; sel.appendChild(o);
+        });
+        bloqueSelector.classList.remove('hidden');
+      } else {
+        // Fallback: si el selector está vacío, poblar desde cursos del DOM
+        if (!sel.options.length) {
+          const list = buildYearSelectorFromCursos() || [];
+          if (list.length) {
+            // Seleccionar el año usado si existe; si no, primero.
+            const match = Array.from(sel.options).some(o => o.value === String(anioUsado));
+            sel.value = match ? String(anioUsado) : sel.options[0].value;
+            bloqueSelector.classList.remove('hidden');
+          } else {
+            bloqueSelector.classList.add('hidden');
+          }
+        } else {
+          // Ya hay opciones: selecciona el usado
+          Array.from(sel.options).forEach(o => { o.selected = (o.value === String(anioUsado)); });
+          bloqueSelector.classList.remove('hidden');
+        }
+      }
+      // Actualiza estado global + filtrado
+      anioActual = parseInt(sel.value || anioUsado, 10);
+      filterCursoOptions();
+    }
+
+    // Alerta de no visibles (sólo si realmente no hay)
+    const alerta = document.getElementById('alert-no-visibles');
+    if (alerta) {
+      if (visibles.length === 0 && (!sel || !sel.options.length)) alerta.classList.remove('hidden');
+      else alerta.classList.add('hidden');
+    }
+
+    return data;
+  }
+
+  // ----- Clic en buscar -----
+  function searchStudent() {
+    const rut = (document.getElementById('rutBuscar')?.value || document.getElementById('rut')?.value || '').trim();
+    if (!rut) { showMessage("Por favor ingrese un RUT válido.", "error"); return; }
+
+    const sel = document.getElementById('selector-anio');
+    const anioSel = sel && sel.value ? parseInt(sel.value, 10) : anioActual;
+    buscarEstudiantesPorRutAPI(rut, anioSel).then(list => {
+      if (!Array.isArray(list) || list.length === 0) { showMessage("Estudiante no encontrado.", "error"); return; }
+      const s = list[0];
+
+      // Básicos
+      setValue('rut', s.rut);
+      setValue('nombre_completo', s.nombre_completo);
+      setValue('fecha_nacimiento', s.fecha_nacimiento);
+      setValue('sexo', s.sexo);
+      setValue('nacionalidad', s.nacionalidad);
+      setValue('domicilio', s.domicilio);
+      setValue('comuna', s.comuna);
+
+      // Curso (filtra por año y luego setea)
+      filterCursoOptions();
+      setSelectByValue('curso_id', s.curso_id, s.curso_text);
+
+      // Condiciones
+      setSelectByText('ascendencia_indigena', s.ascendencia_indigena);
+      setValue('etnia', s.etnia || '');
+      setSelectByText('pertenece_al_pie', s.pertenece_al_pie);
+      setSelectByText('ha_repetido_curso', s.ha_repetido_curso);
+      setSelectByText('estado', s.estado);
+      setValue('de_donde_viene', s.de_donde_viene || '');
+
+      // Madre / Padre
+      setValue('nombre_madre', s.nombre_madre || '');
+      setValue('rut_madre', s.rut_madre || '');
+      setValue('telefono_madre', s.telefono_madre || '');
+      setValue('nivel_educacional_madre', s.nivel_educacional_madre || '');
+      setValue('ocupacion_madre', s.ocupacion_madre || '');
+      setValue('email_madre', s.email_madre || '');
+
+      setValue('nombre_padre', s.nombre_padre || '');
+      setValue('rut_padre', s.rut_padre || '');
+      setValue('telefono_padre', s.telefono_padre || '');
+      setValue('nivel_educacional_padre', s.nivel_educacional_padre || '');
+      setValue('ocupacion_padre', s.ocupacion_padre || '');
+      setValue('email_padre', s.email_padre || '');
+
+      // Apoderado
+      setValue('nombre_apoderado', s.nombre_apoderado || '');
+      setValue('rut_apoderado', s.rut_apoderado || '');
+      setValue('telefono_apoderado', s.telefono_apoderado || '');
+      setValue('fecha_nacimiento_apoderado' , s.fecha_nacimiento_apoderado || '');
+      setValue('nivel_educacional_apoderado', s.nivel_educacional_apoderado || '');
+      setValue('ocupacion_apoderado', s.ocupacion_apoderado || '');
+      setValue('email_apoderado', s.email_apoderado || '');
+
+      // Apoderado Suplente
+      setValue('nombre_apoderado_suplente', s.nombre_apoderado_suplente || '');
+      setValue('rut_apoderado_suplente', s.rut_apoderado_suplente || '');
+      setValue('parentesco_apoderado_suplente', s.parentesco_apoderado_suplente ||'');
+      setValue('telefono_apoderado_suplente', s.telefono_apoderado_suplente || '');
+      setValue('nivel_educacional_apoderado_suplente', s.nivel_educacional_apoderado_suplente || '');
+      setValue('ocupacion_apoderado_suplente', s.ocupacion_apoderado_suplente || '');
+      setValue('email_apoderado_suplente', s.email_apoderado_suplente || '');
+
+      // Social / Salud
+      setSelectByValue('vive_con', s.vive_con);
+      setSelectByText('resolucion_judicial', s.resolucion_judicial);
+      setSelectByText('problemas_salud', s.problemas_salud);
+      setValue('descripcion_problemas_salud', s.descripcion_problemas_salud || '');
+      setSelectByText('impide_educacion_fisica', s.impide_educacion_fisica);
+      setSelectByValue('sistema_salud', s.sistema_salud);
+      setSelectByText('presenta_certificado', s.presenta_certificado);
+
+      // Transporte / otros
+      setValue('tipo_transporte', s.tipo_transporte || '');
+      setValue('opta_religion', s.opta_religion);
+      setValue('acepta_fotografias', s.acepta_fotografias);
+      setValue('fecha_matricula', s.fecha_matricula || '');
+
+      // Imprimir
+      const imprimirBtn = document.getElementById('btn-imprimir');
+      if (imprimirBtn) {
+        imprimirBtn.classList.remove('hidden');
+        imprimirBtn.setAttribute('data-rut', s.rut);
+      }
+
+      showMessage(`Estudiante cargado para el año ${s.anio_mostrado || anioActual || ''}`, "success");
+    }).catch(err => {
+      console.error(err);
+      showMessage("Ocurrió un error al buscar el estudiante.", "error");
+    });
+  }
+
+  // ----- Cambio de año desde selector -----
+  document.addEventListener('change', (e)=>{
+    if (e.target && e.target.id === 'selector-anio') {
+      anioActual = parseInt(e.target.value, 10);
+      const badge = document.getElementById('badge-anio');
+      if (badge) badge.textContent = `Visualizando: ${anioActual}`;
+      filterCursoOptions();
+
+      // Persistir ?anio= en la URL
+      const url = new URL(window.location.href);
+      url.searchParams.set('anio', String(anioActual));
+      history.replaceState({}, '', url);
+
+      // Si ya hay RUT ingresado, refrescar datos del año seleccionado
+      const rut = (document.getElementById('rutBuscar')?.value || document.getElementById('rut')?.value || '').trim();
+      if (rut) { searchStudent(); }
+    }
+  });
+
+  // ----- Hook inicial -----
+  document.addEventListener('DOMContentLoaded', () => {
+    // Poblar selector desde cursos (fallback) y seleccionar por ?anio=
+    const list = buildYearSelectorFromCursos() || [];
+    const sel = document.getElementById('selector-anio');
+    const badge = document.getElementById('badge-anio');
+
+    // Tomar anio de URL si existe
+    const url = new URL(window.location.href);
+    const anioParam = url.searchParams.get('anio');
+    if (sel && sel.options.length) {
+      if (anioParam && Array.from(sel.options).some(o => o.value === String(anioParam))) {
+        sel.value = String(anioParam);
+      }
+      anioActual = parseInt(sel.value || anioParam || '', 10);
+      if (isNaN(anioActual) && list.length) anioActual = list[0];
+      if (badge && anioActual) badge.textContent = `Visualizando: ${anioActual}`;
+    } else {
+      // Sin selector disponible (no hay cursos en DOM): badge = año calendario
+      const ahora = new Date().getFullYear();
+      anioActual = anioParam ? parseInt(anioParam,10) : ahora;
+      if (badge) badge.textContent = `Visualizando: ${anioActual}`;
+      const alerta = document.getElementById('alert-no-visibles');
+      alerta && alerta.classList.remove('hidden');
+    }
+    filterCursoOptions();
+
+    // ?rut= (botón "Editar ficha" de la ficha): prellenar y buscar automáticamente
+    const rutParam = url.searchParams.get('rut');
+    if (rutParam) {
+      const rutInp = document.getElementById('rutBuscar');
+      if (rutInp) rutInp.value = rutParam;
+      searchStudent();
+    }
+
+    // Si el usuario pega el RUT y presiona Enter en el input principal, lanzar búsqueda
+    document.getElementById('rutBuscar')?.addEventListener('keydown', (ev)=>{
+      if (ev.key === 'Enter') { ev.preventDefault(); searchStudent(); }
+    });
+  });
+
+  // ----- Mensajes -----
+  function showMessage(message, type) {
+    const alertBox = document.createElement('div');
+    alertBox.className = `fixed top-5 right-5 p-4 rounded-lg shadow-lg text-white ${type === 'success' ? 'bg-green-500' : 'bg-red-500'}`;
+    alertBox.textContent = message;
+    document.body.appendChild(alertBox);
+    setTimeout(() => {
+      alertBox.style.opacity = '0';
+      alertBox.style.transition = 'opacity 0.8s';
+      setTimeout(() => alertBox.remove(), 900);
+    }, 2500);
+  }
+
+  // ----- Guardado + botón imprimir -----
+  document.getElementById('newStudentForm').addEventListener('submit', function (event) {
+    event.preventDefault();
+    const formData = new FormData(this);
+
+    fetch(this.action, { method: 'POST', body: formData })
+      .then((response) => {
+        if (response.ok) {
+          showMessage('Los cambios se guardaron correctamente.', 'success');
+          const imprimirBtn = document.getElementById('btn-imprimir');
+          imprimirBtn.classList.remove('hidden');
+          imprimirBtn.setAttribute('data-rut', formData.get('rut') || '');
+        } else {
+          throw new Error('Error al guardar los cambios.');
+        }
+      })
+      .catch((error) => {
+        console.error('Error al guardar los cambios:', error);
+        showMessage('Hubo un error al guardar los cambios.', 'error');
+      });
+  });
+
+  // ----- Imprimir (corrige el año usado) -----
+  function imprimirEstudiante() {
+    const rut = document.getElementById('btn-imprimir').getAttribute('data-rut');
+    if (!rut) {
+      alert('No se ha encontrado el RUT del estudiante para imprimir.');
+      return;
+    }
+
+    // Usa el año actual visualizado o el seleccionado
+    const anio = anioActual || parseInt(document.getElementById('selector-anio')?.value || '') || new Date().getFullYear();
+
+    // Abre el PDF en una nueva pestaña con el año correcto
+    const url = `/imprimir-estudiante/${rut}/?anio=${anio}`;
+    window.open(url, '_blank');
+  }
+  window.imprimirEstudiante = imprimirEstudiante;
+</script>
+
+<style>
+  body { background: #2677e2; }
+</style>
+{% endblock %}

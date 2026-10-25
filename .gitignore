@@ -1,0 +1,32 @@
+# Entorno y secretos — NUNCA subir
+.env
+*.env
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Django
+db.sqlite3
+*.sqlite3
+staticfiles/
+media/
+# artefacto histórico: BD de dev creada con el nombre de la BD MySQL por descuido
+liceospc_ficha2025
+
+# IDE / SO
+.DS_Store
+.idea/
+.vscode/
+
+# Node (config legados del proyecto)
+node_modules/
+
+# Artefactos locales
+deploy/
+backups/
+mockups/v3/.DS_Store

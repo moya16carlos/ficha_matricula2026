@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockup 00 · Guía de estilo v3</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>html,body{font-family:'Inter',ui-sans-serif,system-ui,sans-serif}</style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen">
+
+<main class="max-w-6xl mx-auto px-6 py-10">
+
+  <div class="rounded-3xl bg-gradient-to-br from-indigo-600 to-indigo-800 text-white p-8 mb-8 shadow-lg">
+    <p class="text-indigo-200 text-xs font-semibold uppercase tracking-widest">Propuesta · v3</p>
+    <h1 class="text-3xl font-bold mt-1">Sistema visual «Institucional claro»</h1>
+    <p class="mt-2 text-indigo-100 max-w-2xl text-sm">Un solo idioma visual para toda la intranet: fondo claro, indigo como color único, jerarquía tipográfica consistente y componentes repetibles. Reemplaza la mezcla actual (login morado animado + navbar oscuro + botones heterogéneos).</p>
+    <div class="mt-5 grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+      <div class="rounded-xl bg-white/10 ring-1 ring-white/15 px-4 py-3"><b>1 tipografía</b><div class="text-indigo-200 text-xs mt-0.5">Inter (hoy: Poppins + Inter mezcladas)</div></div>
+      <div class="rounded-xl bg-white/10 ring-1 ring-white/15 px-4 py-3"><b>1 color acción</b><div class="text-indigo-200 text-xs mt-0.5">Indigo = botones y enlaces; rojo/ámbar solo semántico</div></div>
+      <div class="rounded-xl bg-white/10 ring-1 ring-white/15 px-4 py-3"><b>Navbar claro</b><div class="text-indigo-200 text-xs mt-0.5">Blanco con borde; contenido respira (antes oscuro)</div></div>
+      <div class="rounded-xl bg-white/10 ring-1 ring-white/15 px-4 py-3"><b>Todo CLI=0</b><div class="text-indigo-200 text-xs mt-0.5">Estados visibles: activo, prov., retirado, guardado</div></div>
+    </div>
+  </div>
+
+  <!-- Colores -->
+  <section class="rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm p-6 mb-6">
+    <h2 class="text-lg font-bold text-slate-800 mb-1">1 · Paleta</h2>
+    <p class="text-sm text-slate-500 mb-4">Base neutra + 4 colores con significado fijo.</p>
+    <div class="grid grid-cols-3 md:grid-cols-7 gap-3 text-xs">
+      <div><div class="h-14 rounded-lg bg-slate-800 ring-1 ring-slate-300"></div><p class="mt-1.5 font-mono">slate-800<br><span class="text-slate-400">texto / títulos</span></p></div>
+      <div><div class="h-14 rounded-lg bg-indigo-600"></div><p class="mt-1.5 font-mono"><b>indigo-600</b><br><span class="text-slate-400">acción primaria</span></p></div>
+      <div><div class="h-14 rounded-lg bg-indigo-50 ring-1 ring-indigo-200"></div><p class="mt-1.5 font-mono">indigo-50<br><span class="text-slate-400">selección / hover</span></p></div>
+      <div><div class="h-14 rounded-lg bg-emerald-500"></div><p class="mt-1.5 font-mono">emerald<br><span class="text-slate-400">éxito / Activo</span></p></div>
+      <div><div class="h-14 rounded-lg bg-amber-400"></div><p class="mt-1.5 font-mono">amber<br><span class="text-slate-400">atención / RUT prov.</span></p></div>
+      <div><div class="h-14 rounded-lg bg-red-500"></div><p class="mt-1.5 font-mono">red<br><span class="text-slate-400">solo peligro (borrar/salir)</span></p></div>
+      <div><div class="h-14 rounded-lg bg-slate-100 ring-1 ring-slate-200"></div><p class="mt-1.5 font-mono">slate-100<br><span class="text-slate-400">fondos secundarios</span></p></div>
+    </div>
+  </section>
+
+  <!-- Tipografía -->
+  <section class="rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm p-6 mb-6">
+    <h2 class="text-lg font-bold text-slate-800 mb-1">2 · Tipografía (Inter)</h2>
+    <p class="text-sm text-slate-500 mb-4">Escala única en toda la app.</p>
+    <div class="grid md:grid-cols-2 gap-x-12 gap-y-3">
+      <div class="flex items-baseline gap-4"><span class="text-2xl font-bold text-slate-800 w-56">Título página</span><span class="text-xs text-slate-400 font-mono">text-2xl bold</span></div>
+      <div class="flex items-baseline gap-4"><span class="text-lg font-semibold text-slate-800 w-56">Título de sección</span><span class="text-xs text-slate-400 font-mono">text-lg semibold</span></div>
+      <div class="flex items-baseline gap-4"><span class="text-sm font-medium text-slate-800 w-56">Etiqueta de campo</span><span class="text-xs text-slate-400 font-mono">text-sm medium</span></div>
+      <div class="flex items-baseline gap-4"><span class="text-sm text-slate-600 w-56">Texto y valores</span><span class="text-xs text-slate-400 font-mono">text-sm</span></div>
+      <div class="flex items-baseline gap-4"><span class="text-xs text-slate-500 w-56">Ayudas y metadatos</span><span class="text-xs text-slate-400 font-mono">text-xs slate-500</span></div>
+      <div class="flex items-baseline gap-4"><span class="text-sm font-mono text-slate-700 w-56">12345678-9</span><span class="text-xs text-slate-400 font-mono">RUTs en font-mono</span></div>
+    </div>
+  </section>
+
+  <!-- Botones -->
+  <section class="rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm p-6 mb-6">
+    <h2 class="text-lg font-bold text-slate-800 mb-1">3 · Botones (los de toda la app)</h2>
+    <p class="text-sm text-slate-500 mb-4">Hoy conviven 5 estilos distintos; quedan 4 con roles claros.</p>
+    <div class="flex flex-wrap items-center gap-3">
+      <button class="rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700">Primario (guardar, iniciar)</button>
+      <button class="rounded-xl bg-white ring-1 ring-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">Secundario (filtrar, cancelar)</button>
+      <button class="rounded-xl bg-slate-100 px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-200">Fantasma (acciones menores)</button>
+      <button class="rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700">Peligro (borrar / salir)</button>
+    </div>
+    <p class="mt-3 text-xs text-slate-400">Nota: «Cerrar Sesión» roja pasa a botón fantasma con icono — rojo solo cuando la acción puede destruir datos.</p>
+  </section>
+
+  <!-- Estados -->
+  <section class="rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm p-6 mb-6">
+    <h2 class="text-lg font-bold text-slate-800 mb-1">4 · Píldoras de estado</h2>
+    <p class="text-sm text-slate-500 mb-4">Mismo esqueleto (redonda, texto 11px) en listados, fichas y buscador.</p>
+    <div class="flex flex-wrap gap-2">
+      <span class="rounded-full bg-emerald-50 ring-1 ring-emerald-200 px-3 py-1 text-xs font-semibold text-emerald-700">✔ Activo</span>
+      <span class="rounded-full bg-slate-100 ring-1 ring-slate-200 px-3 py-1 text-xs font-semibold text-slate-600">Retirado</span>
+      <span class="rounded-full bg-amber-50 ring-1 ring-amber-200 px-3 py-1 text-xs font-semibold text-amber-700">⚠ RUT provisional</span>
+      <span class="rounded-full bg-indigo-50 ring-1 ring-indigo-200 px-3 py-1 text-xs font-semibold text-indigo-700">Matriculado 2026</span>
+      <span class="rounded-full bg-rose-50 ring-1 ring-rose-200 px-3 py-1 text-xs font-semibold text-rose-700">Sin curso</span>
+      <span class="rounded-full bg-white ring-1 ring-slate-300 px-3 py-1 text-xs font-semibold text-slate-600">Egresado</span>
+    </div>
+  </section>
+
+  <!-- Inputs + tabla -->
+  <section class="grid md:grid-cols-2 gap-6">
+    <div class="rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm p-6">
+      <h2 class="text-lg font-bold text-slate-800 mb-1">5 · Inputs</h2>
+      <p class="text-sm text-slate-500 mb-4">Redondez 12px, foco indigo visible, ayuda bajo el campo.</p>
+      <label class="block text-sm font-medium text-slate-700 mt-4">RUT <span class="text-red-500">*</span></label>
+      <input value="16777777-5" class="mt-1 w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+      <p class="mt-1 text-xs text-slate-400">Se valida el dígito verificador automáticamente.</p>
+      <label class="block text-sm font-medium text-slate-700 mt-4">Deshabilitado</label>
+      <input value="No editable" disabled class="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-400 cursor-not-allowed">
+    </div>
+    <div class="rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm p-6">
+      <h2 class="text-lg font-bold text-slate-800 mb-1">6 · Tabla modelo</h2>
+      <p class="text-sm text-slate-500 mb-4">Encabezado gris fijo, filas con hover, RUT mono, acciones fantasma.</p>
+      <table class="min-w-full text-sm">
+        <thead><tr class="text-left text-xs uppercase tracking-wide text-slate-500 border-b border-slate-200">
+          <th class="py-2.5 font-semibold">Estudiante</th><th class="py-2.5 font-semibold">RUT</th><th class="py-2.5 font-semibold">Estado</th>
+        </tr></thead>
+        <tbody class="divide-y divide-slate-100">
+          <tr class="hover:bg-indigo-50/40"><td class="py-2.5"><a class="text-indigo-700 font-medium hover:underline">Antonia García Vidal</a></td><td class="font-mono text-slate-600">16777777-5</td><td><span class="rounded-full bg-emerald-50 ring-1 ring-emerald-200 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">Activo</span></td></tr>
+          <tr class="hover:bg-indigo-50/40 bg-amber-50/50"><td class="py-2.5"><a class="text-indigo-700 font-medium hover:underline">Angelina Rivera Ojeda</a></td><td class="font-mono text-slate-600">100734494-1</td><td><span class="rounded-full bg-amber-50 ring-1 ring-amber-200 px-2.5 py-0.5 text-xs font-semibold text-amber-700">RUT prov.</span></td></tr>
+          <tr class="hover:bg-indigo-50/40"><td class="py-2.5"><a class="text-indigo-700 font-medium hover:underline">Agustina Pascal Vera</a></td><td class="font-mono text-slate-600">26493646-2</td><td><span class="rounded-full bg-emerald-50 ring-1 ring-emerald-200 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">Activo</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <p class="mt-8 text-center text-xs text-slate-400">Guía 00 de 6 · se aplica en los mockups 01 Login · 02 Inicio · 03 Listado · 04 Ficha · 05 Formulario</p>
+</main>
+</body>
+</html>

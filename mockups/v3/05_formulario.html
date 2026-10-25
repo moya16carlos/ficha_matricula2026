@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockup 05 · Formulario de estudiante v3</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>html,body{font-family:'Inter',ui-sans-serif,system-ui,sans-serif}</style>
+</head>
+
+<body class="bg-slate-100 text-slate-800 min-h-screen pb-24">
+
+<!-- NAVBAR CLARO -->
+<header class="sticky top-0 z-40 bg-white border-b border-slate-200">
+  <div class="max-w-6xl mx-auto px-6 h-16 flex items-center gap-5">
+    <div class="flex items-center gap-3 shrink-0">
+      <div class="h-9 w-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white text-lg">🎓</div>
+      <div class="leading-none"><p class="font-bold text-slate-900 text-[15px]">Liceo San Pedro</p><p class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Intranet matrículas</p></div>
+    </div>
+    <div class="flex-1 max-w-md relative">
+      <div class="flex items-center gap-2 rounded-xl bg-slate-100 px-3 py-2 hover:ring-slate-300 focus-within:bg-white focus-within:ring-2 focus-within:ring-indigo-500 transition">
+        <svg class="h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-width="2" d="m21 21-4.3-4.3M11 19a8 8 0 1 1 0-16 8 8 0 0 1 0 16Z"/></svg>
+        <input placeholder="Busca por nombre o RUT…" class="bg-transparent outline-none text-sm w-full placeholder:text-slate-400">
+      </div>
+    </div>
+    <nav class="flex items-center gap-5 text-sm font-medium text-slate-600 shrink-0">
+      <a class="hover:text-slate-900">Inicio</a>
+      <a class="hover:text-slate-900">Matrículas</a>
+      <div class="flex items-center gap-2 rounded-full ring-1 ring-slate-200 py-1 pr-2 pl-1 hover:bg-slate-50 cursor-pointer"><span class="h-7 w-7 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center justify-center">CM</span><span class="text-xs text-slate-600">Carlos ▾</span></div>
+      <a class="rounded-xl px-2.5 py-2 text-slate-500 hover:bg-red-50 hover:text-red-600">⏻</a>
+    </nav>
+  </div>
+</header>
+
+<main class="max-w-6xl mx-auto px-6 py-7">
+  <nav class="flex items-center gap-1.5 text-xs text-slate-400 mb-3">
+    <a href="#" class="hover:text-indigo-600">Inicio</a><span>/</span>
+    <a href="#" class="hover:text-indigo-600">Estudiantes</a><span>/</span>
+    <a href="#" class="hover:text-indigo-600">Antonia García Vidal M.</a><span>/</span>
+    <span class="text-slate-600 font-medium">Editar ficha</span>
+  </nav>
+
+  <!-- Título + modo -->
+  <div class="flex flex-wrap items-end justify-between gap-3 mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900">Editar ficha del estudiante</h1>
+      <p class="text-sm text-slate-500 mt-0.5">Los campos marcados <span class="text-red-500 font-bold">*</span> son obligatorios · el RUT se valida con dígito verificador al escribir.</p>
+    </div>
+    <div class="rounded-xl bg-white ring-1 ring-slate-200 px-4 py-2.5 text-sm">
+      <span class="text-slate-500">Editando a</span> <b class="text-slate-800">Antonia García Vidal M.</b>
+      <button class="ml-2 text-xs font-semibold text-red-600 hover:underline">cancelar cambios</button>
+    </div>
+  </div>
+
+  <!-- PASOS/SECCIONES numeradas (reemplaza el "scroll infinito" de hoy) -->
+  <div class="grid lg:grid-cols-4 gap-5">
+    <nav class="lg:col-span-1 lg:sticky lg:top-24 self-start space-y-1.5">
+      <a href="#" class="flex items-center gap-3 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-sm">1 Identidad del estudiante</a>
+      <a href="#" class="flex items-center gap-3 rounded-xl bg-white ring-1 ring-slate-200 px-4 py-3 text-sm text-slate-600 hover:bg-slate-50">2 Matrícula y curso</a>
+      <a href="#" class="flex items-center gap-3 rounded-xl bg-white ring-1 ring-slate-200 px-4 py-3 text-sm text-slate-600 hover:bg-slate-50">3 Familia y apoderado</a>
+      <a href="#" class="flex items-center gap-3 rounded-xl bg-white ring-1 ring-slate-200 px-4 py-3 text-sm text-slate-600 hover:bg-slate-50">4 Salud y contexto</a>
+      <div class="rounded-xl bg-indigo-50 ring-1 ring-indigo-100 px-4 py-3 text-xs text-indigo-800 mt-4">
+        <b>3 de 4 secciones completas</b>
+        <div class="mt-2 h-1.5 w-full rounded-full bg-indigo-200"><div class="h-1.5 w-3/4 rounded-full bg-indigo-600"></div></div>
+        <p class="mt-2 text-indigo-600/80">Falta: apoderado suplente (teléfono).</p>
+      </div>
+    </nav>
+
+    <!-- Formulario -->
+    <div class="lg:col-span-3 space-y-4">
+
+      <section class="rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm p-6">
+        <div class="flex items-center justify-between mb-5">
+          <h2 class="text-base font-bold text-slate-800">1 · Identidad del estudiante</h2>
+          <span class="rounded-full bg-emerald-50 ring-1 ring-emerald-200 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">✔ completa</span>
+        </div>
+        <div class="grid md:grid-cols-2 gap-x-6 gap-y-4">
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1.5">RUT <span class="text-red-500">*</span></label>
+            <input value="16777777-5" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <p class="mt-1 text-xs text-emerald-600 font-medium">✔ RUT válido (DV correcto)</p>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1.5">Nombre completo <span class="text-red-500">*</span></label>
+            <input value="Antonia García Vidal Mendoza" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1.5">Fecha de nacimiento <span class="text-red-500">*</span></label>
+            <input type="date" value="2009-04-12" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1.5">Sexo <span class="text-red-500">*</span></label>
+            <select class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"><option selected>Femenino</option><option>Masculino</option></select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1.5">Nacionalidad</label>
+            <select class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"><option>Chilena</option><option>Venezolana</option><option>Haitiana</option><option>Colombiana</option><option>Otra</option></select>
+            <p class="mt-1 text-xs text-slate-400">«Extranjera» activa la sección VII (RUT provisional).</p>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1.5">Comuna <span class="text-red-500">*</span></label>
+            <select class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"><option selected>San Pedro</option><option>Valdivia</option><option>Corral</option></select>
+          </div>
+          <div class="md:col-span-2">
+            <label class="block text-sm font-medium text-slate-700 mb-1.5">Domicilio <span class="text-red-500">*</span></label>
+            <input value="Los Álamos 1234" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          </div>
+        </div>
+      </section>
+
+      <section class="rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm p-6">
+        <div class="flex items-center justify-between mb-5">
+          <h2 class="text-base font-bold text-slate-800">2 · Matrícula y curso</h2>
+          <span class="rounded-full bg-emerald-50 ring-1 ring-emerald-200 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">✔ completa</span>
+        </div>
+        <div class="grid md:grid-cols-3 gap-x-6 gap-y-4">
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1.5">Año académico</label>
+            <select class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"><option>2026</option><option>2025</option></select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1.5">Curso</label>
+            <select class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"><option selected>3° Medio B (34)</option><option>3° Medio A (35)</option><option>Por asignar</option></select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1.5">Estado matrícula</label>
+            <select class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"><option selected>Activo</option><option>Retirado</option><option>Egresado</option></select>
+          </div>
+        </div>
+      </section>
+
+      <section class="rounded-2xl bg-white ring-1 ring-amber-200 shadow-sm p-6">
+        <div class="flex items-center justify-between mb-5">
+          <h2 class="text-base font-bold text-slate-800">3 · Familia y apoderado</h2>
+          <span class="rounded-full bg-amber-100 ring-1 ring-amber-200 px-2.5 py-0.5 text-xs font-bold text-amber-700">⚠ 1 campo pendiente</span>
+        </div>
+        <div class="grid md:grid-cols-2 gap-x-6 gap-y-4">
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1.5">Nombre apoderado(a) <span class="text-red-500">*</span></label>
+            <input value="Carmen Vidal Rojas" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1.5">RUT apoderado(a)</label>
+            <input value="13224466-4" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1.5">Teléfono <span class="text-red-500">*</span></label>
+            <div class="flex gap-2">
+              <input value="+56 9 6123 4567" class="flex-1 rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <p class="mt-1 text-xs text-slate-400">Se usa para SMS/notificaciones del establecimiento.</p>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1.5">Vive con</label>
+            <select class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"><option selected>Madre</option><option>Ambos padres</option><option>Padre</option><option>Otro</option></select>
+          </div>
+          <!-- suplente: pendiente -->
+          <div class="md:col-span-2 rounded-xl bg-amber-50 ring-1 ring-amber-200 px-4 py-3 text-sm text-amber-800">
+            <b>Apoderado suplente:</b> falta completar teléfono. <button class="ml-2 rounded-lg bg-amber-400 px-3 py-1 text-xs font-bold text-slate-900">Completar ahora ↓</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm p-6">
+        <div class="flex items-center justify-between mb-5">
+          <h2 class="text-base font-bold text-slate-800">4 · Salud y contexto</h2>
+          <span class="rounded-full bg-emerald-50 ring-1 ring-emerald-200 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">✔ completa</span>
+        </div>
+        <div class="grid md:grid-cols-2 gap-x-6 gap-y-4">
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1.5">Seguro de salud</label>
+            <select class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"><option selected>Fonasa A</option><option>Fonasa B</option><option>Isapre</option><option>Otro</option></select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1.5">Transporte</label>
+            <select class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"><option selected>Bus escolar</option><option>Reúne a pie</option><option>Transporte propio</option></select>
+          </div>
+          <div class="md:col-span-2">
+            <label class="block text-sm font-medium text-slate-700 mb-1.5">Observaciones médicas o sociales</label>
+            <textarea rows="2" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Alergias, convenios, situación relevante…"></textarea>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- BARRA DE GUARDADO STICKY -->
+  <div class="fixed bottom-0 left-0 right-0 z-30 border-t border-slate-200 bg-white/95 backdrop-blur">
+    <div class="max-w-6xl mx-auto px-6 py-3.5 flex items-center justify-between gap-3">
+      <p class="text-xs text-slate-500"><span class="rounded-full bg-red-50 ring-1 ring-rose-200 px-2 py-0.5 font-semibold text-rose-600 mr-1">1 pendiente</span> apoderado suplente — puede guardar igual y completarlo después.</p>
+      <div class="flex gap-2">
+        <button class="rounded-xl bg-white ring-1 ring-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">Descartar cambios</button>
+        <button class="rounded-xl bg-white ring-1 ring-indigo-200 px-4 py-2.5 text-sm font-semibold text-indigo-700 hover:bg-indigo-50">Guardar y PDF</button>
+        <button class="rounded-xl bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 shadow-sm">Guardar ficha</button>
+      </div>
+    </div>
+  </div>
+</main>
+</body>
+</html>

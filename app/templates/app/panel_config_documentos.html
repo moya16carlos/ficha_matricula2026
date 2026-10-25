@@ -1,0 +1,1355 @@
+{% extends "base.html" %}
+{% load static %}
+{% load perm_extras %}
+
+{% block title %}Panel de Configuración · Matrículas LSP{% endblock %}
+
+{% block content %}
+<section class="py-7">
+  <div class="mx-auto max-w-6xl px-6">
+    <!-- Breadcrumb + título -->
+    <nav class="flex items-center gap-1.5 text-xs text-slate-400 mb-3">
+      <a href="{% url 'home' %}" class="hover:text-indigo-600">Inicio</a><span>/</span>
+      <span class="text-slate-600 font-medium">Panel de configuración</span>
+    </nav>
+    <div class="mb-6">
+      <h1 class="text-2xl font-bold text-slate-900">Panel de Configuración</h1>
+      <p class="text-sm text-slate-500 mt-0.5">Administra la ficha de matrícula, firma del director, visibilidad de años, cursos, permisos y más.</p>
+    </div>
+
+    {% if messages %}
+      <div class="space-y-2 mb-6">
+        {% for message in messages %}
+          <div class="flex items-start gap-3 rounded-xl border border-emerald-300/50 bg-emerald-50 px-4 py-3 text-emerald-800 shadow-sm">
+            <svg class="mt-0.5 h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-width="2" d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10Z"/><path stroke-width="2" d="m9 12 2 2 4-4"/></svg>
+            <div class="text-sm leading-5">{{ message }}</div>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <!-- ===== Grid principal ===== -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+      <!-- Card: Configuración Ficha de Matrícula -->
+      <section class="form-card rounded-2xl border border-white/10 bg-white shadow-sm backdrop-blur-sm p-5">
+        <header class="mb-4">
+          <h2 class="text-lg font-semibold text-slate-800">Ficha de Matrícula</h2>
+          <p class="text-xs text-slate-500">Puedes usar <code class="px-1 rounded bg-slate-100">{anio}</code> en el título. Ej: “Ficha Matrícula {anio}”.</p>
+        </header>
+
+        <form method="post" class="space-y-4" id="form-matricula" action="{% url 'panel_config_documentos' %}">
+          {% csrf_token %}
+          <input type="hidden" name="form_type" value="matricula" />
+
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Título</label>
+            {{ form_m.titulo }}
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-slate-700 mb-1">Año</label>
+              {{ form_m.anio }}
+            </div>
+            <label class="flex items-center gap-2 pt-6 cursor-pointer select-none">
+              {{ form_m.activa }}
+              <span class="text-sm text-slate-700">Marcar como activa</span>
+            </label>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Subtítulo (opcional)</label>
+            {{ form_m.subtitulo }}
+          </div>
+
+          <div class="pt-2">
+            <button class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-white shadow hover:bg-indigo-700 transition">
+              <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-width="2" d="M5 12h14M12 5v14"/></svg>
+              Guardar
+            </button>
+          </div>
+        </form>
+
+        <div class="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4 text-center">
+          <p class="text-xs uppercase tracking-wide text-slate-500">Vista previa</p>
+          <p id="tituloPreview" class="mt-1 text-base font-semibold text-slate-800">
+            {{ titulo_preview }}
+          </p>
+        </div>
+      </section>
+
+      <!-- Card: Firma del Director (subir/crear) -->
+      <section class="form-card rounded-2xl border border-white/10 bg-white shadow-sm backdrop-blur-sm p-5">
+        <header class="mb-4">
+          <h2 class="text-lg font-semibold text-slate-800">Firma del Director</h2>
+          <p class="text-xs text-slate-500">Sube una imagen (PNG/JPG). Marca una sola activa.</p>
+        </header>
+
+        <form method="post" enctype="multipart/form-data" class="space-y-4" id="form-firma" action="{% url 'panel_config_documentos' %}">
+          {% csrf_token %}
+          <input type="hidden" name="form_type" value="firma" />
+
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Nombre del Director</label>
+            {{ form_f.nombre_director }}
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Imagen de la firma (PNG/JPG)</label>
+            {{ form_f.imagen_firma }}
+          </div>
+
+          <label class="flex items-center gap-2 cursor-pointer select-none">
+            {{ form_f.activa }}
+            <span class="text-sm text-slate-700">Marcar como activa</span>
+          </label>
+
+          <div class="pt-2">
+            <button class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-white shadow hover:bg-indigo-700 transition">
+              <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-width="2" d="M5 12h14M12 5v14"/></svg>
+              Guardar firma
+            </button>
+          </div>
+        </form>
+
+        <div class="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <p class="text-xs uppercase tracking-wide text-slate-500">Firma activa</p>
+          {% if firma_url %}
+            <img id="firmaPreview" src="{{ firma_url }}" alt="Firma Director" class="mt-2 h-20 object-contain">
+          {% else %}
+            <div class="mt-2 text-sm text-slate-500">No hay firma activa cargada.</div>
+          {% endif %}
+        </div>
+      </section>
+
+      <!-- NUEVA Card: Panel de firmas (Listado y acciones) -->
+      <section class="rounded-2xl border border-white/10 bg-white shadow-sm backdrop-blur-sm p-5 md:col-span-2">
+        <header class="mb-4 flex items-center justify-between">
+          <div>
+            <h2 class="text-lg font-semibold text-slate-800">Panel de firmas</h2>
+            <p class="text-xs text-slate-500">Administra todas las firmas: activa una o elimina las que no necesites.</p>
+          </div>
+        </header>
+
+        {% if firmas %}
+          <ul class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% for f in firmas %}
+              <li class="border border-slate-200 rounded-xl p-4 flex gap-4 items-center bg-white">
+                <div class="w-28 h-16 flex items-center justify-center bg-slate-50 border border-slate-200 rounded-lg overflow-hidden">
+                  {% if f.imagen_firma %}
+                    <img src="{{ f.imagen_firma.url }}" alt="Firma" class="max-h-16 object-contain">
+                  {% else %}
+                    <span class="text-xs text-slate-500">Sin imagen</span>
+                  {% endif %}
+                </div>
+
+                <div class="flex-1">
+                  <div class="font-medium text-slate-900">{{ f.nombre_director }}</div>
+                  <div class="text-sm mt-1">
+                    {% if f.activa %}
+                      <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Activa</span>
+                    {% else %}
+                      <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">Inactiva</span>
+                    {% endif %}
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-2">
+                  {% if not f.activa %}
+                    <form method="post" class="inline" action="{% url 'panel_config_documentos' %}">
+                      {% csrf_token %}
+                      <input type="hidden" name="form_type" value="firma_toggle">
+                      <input type="hidden" name="activar_id" value="{{ f.id }}">
+                      <button class="px-3 py-1.5 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700">Activar</button>
+                    </form>
+                  {% endif %}
+                  <form method="post" class="inline" action="{% url 'panel_config_documentos' %}" onsubmit="return confirm('¿Eliminar esta firma?');">
+                    {% csrf_token %}
+                    <input type="hidden" name="form_type" value="firma_delete">
+                    <input type="hidden" name="eliminar_id" value="{{ f.id }}">
+                    <button class="px-3 py-1.5 text-sm rounded-lg bg-rose-600 text-white hover:bg-rose-700">Eliminar</button>
+                  </form>
+                </div>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="text-sm text-slate-600">Aún no hay firmas registradas.</p>
+        {% endif %}
+      </section>
+
+      <!-- Card: Gestión de Años Académicos (visibilidad) -->
+      <section class="rounded-2xl border border-white/10 bg-white shadow-sm backdrop-blur-sm p-5 md:col-span-2">
+        <header class="mb-4">
+          <h2 class="text-lg font-semibold text-slate-800">Gestión de Años Académicos</h2>
+          <p class="text-xs text-slate-500">Controla qué años aparecen en el listado de estudiantes.</p>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {% for y in anios_disponibles %}
+            <div class="flex items-center justify-between px-4 py-3 rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition">
+              <div>
+                <h3 class="font-semibold text-slate-800">Año {{ y.anio }}</h3>
+                <p class="text-xs text-slate-500">Visible en panel de estudiantes</p>
+              </div>
+
+              <div class="flex items-center gap-3">
+                <span class="px-3 py-1 rounded text-xs font-medium
+                  {% if y.is_visible %} bg-green-500 text-white {% else %} bg-slate-300 text-slate-700 {% endif %}">
+                  {% if y.is_visible %}Visible{% else %}Oculto{% endif %}
+                </span>
+
+                <!-- CENTRALIZADO: toggle visibilidad via panel_config_documentos -->
+                <form method="POST" action="{% url 'panel_config_documentos' %}">
+                  {% csrf_token %}
+                  <input type="hidden" name="form_type" value="ay_toggle_visible">
+                  <input type="hidden" name="ay_id" value="{{ y.id }}">
+                  <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                    <input type="checkbox" name="is_visible" value="1"
+                           {% if y.is_visible %}checked{% endif %}
+                           onchange="this.form.submit()"
+                           class="h-4 w-4 accent-indigo-600 cursor-pointer">
+                    <span>Mostrar</span>
+                  </label>
+                </form>
+              </div>
+            </div>
+          {% empty %}
+            <div class="col-span-full text-center py-6 text-slate-500">
+              No hay años académicos registrados.
+            </div>
+          {% endfor %}
+        </div>
+
+        <div class="mt-6 text-right border-t border-slate-100 pt-4">
+          <!-- CENTRALIZADO: agregar año via panel_config_documentos -->
+          <form method="POST" action="{% url 'panel_config_documentos' %}" class="inline-flex items-center gap-2">
+            {% csrf_token %}
+            <input type="hidden" name="form_type" value="ay_create">
+            <input type="hidden" name="is_visible" value="1">
+            <input type="number" name="anio" placeholder="Ej: 2026"
+                   class="border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 w-32 text-center"
+                   required>
+            <button type="submit"
+                    class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-4 py-2 rounded-lg shadow transition">
+              Agregar año
+            </button>
+          </form>
+        </div>
+      </section>
+
+      <!-- Card: Gestión de Cursos (con filtro por año + paginación 10/pg) -->
+      <section id="gestion-cursos" class="rounded-2xl border border-white/10 bg-white shadow-sm backdrop-blur-sm p-5 md:col-span-2">
+        <header class="mb-4">
+          <h2 class="text-lg font-semibold text-slate-800">Gestión de Cursos</h2>
+          <p class="text-xs text-slate-500">Agrega, visualiza y elimina cursos del sistema. Usa el filtro por año para acotar la lista.</p>
+        </header>
+
+        <!-- Form crear curso -->
+        <form method="post" class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6" action="{% url 'panel_config_documentos' %}">
+          {% csrf_token %}
+          <input type="hidden" name="form_type" value="curso_create">
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Nivel</label>
+            <input type="text" name="nivel" placeholder="Ej: 1° Básico" required class="w-full p-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Letra</label>
+            <input type="text" name="letra" placeholder="A" class="w-full p-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Año</label>
+            <input type="number" name="anio" value="{{ now|date:'Y' }}" required class="w-full p-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500">
+          </div>
+          <div>
+            <button class="w-full rounded-lg bg-emerald-600 text-white px-4 py-2 mt-6 hover:bg-emerald-700 transition">Agregar</button>
+          </div>
+        </form>
+
+        <!-- Controles de filtro + paginación -->
+        <div class="mb-3 flex flex-wrap items-center gap-3">
+          <div class="flex items-center gap-2">
+            <label for="filtro-anio" class="text-sm text-slate-700">Filtrar por año:</label>
+            <select id="filtro-anio" class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm focus:ring-2 focus:ring-indigo-500">
+              <option value="">— Todos —</option>
+              <!-- Se autocompleta por JS con los años encontrados en la tabla -->
+            </select>
+          </div>
+
+          <div class="ml-auto flex items-center gap-2">
+            <button id="btn-prev" type="button" class="px-3 py-1.5 rounded-lg bg-slate-200 text-slate-700 disabled:opacity-50">Anterior</button>
+            <span id="pager-info" class="text-sm text-slate-600">Página 1 / 1</span>
+            <button id="btn-next" type="button" class="px-3 py-1.5 rounded-lg bg-slate-200 text-slate-700 disabled:opacity-50">Siguiente</button>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto rounded-xl border border-slate-200">
+          <table class="w-full text-left">
+            <thead class="bg-slate-100 text-slate-700">
+              <tr>
+                <th class="px-4 py-2">Nivel</th>
+                <th class="px-4 py-2">Letra</th>
+                <th class="px-4 py-2">Año</th>
+                <th class="px-4 py-2 text-center">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-cursos">
+              {% for c in cursos %}
+              <tr class="border-t border-slate-200 hover:bg-slate-50" data-year="{{ c.anio }}">
+                <td class="px-4 py-2">{{ c.nivel }}</td>
+                <td class="px-4 py-2">{{ c.letra|default:"-" }}</td>
+                <td class="px-4 py-2">{{ c.anio }}</td>
+                <td class="px-4 py-2 text-center">
+                  <form method="post" class="inline-block" action="{% url 'panel_config_documentos' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="form_type" value="curso_delete">
+                    <input type="hidden" name="curso_id" value="{{ c.id }}">
+                    <button onclick="return confirm('¿Eliminar el curso {{ c }} permanentemente?')" class="px-3 py-1 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition">Eliminar</button>
+                  </form>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="4" class="text-center py-4 text-slate-500">No hay cursos registrados.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="mt-2 text-sm text-slate-600">
+          <span id="contador-cursos">0</span> curso(s) mostrados.
+        </div>
+      </section>
+
+
+      <!-- Card: Preferencias del Sistema -->
+      <section class="rounded-2xl border border-white/10 bg-white shadow-sm backdrop-blur-sm p-5 md:col-span-2">
+        <header class="mb-4">
+          <h2 class="text-lg font-semibold text-slate-800">Preferencias del Sistema</h2>
+          <p class="text-xs text-slate-500">Habilita o deshabilita funciones generales.</p>
+        </header>
+
+        <!-- IMPORTANTE: usar form_type = sistema_update para que el view lo procese -->
+        <form method="post" class="space-y-4" action="{% url 'panel_config_documentos' %}">
+          {% csrf_token %}
+          <input type="hidden" name="form_type" value="sistema_update" />
+          <label class="flex items-center gap-3">
+            {{ form_s.registro_apoderado_habilitado }}
+            <span class="text-sm text-slate-700">Permitir “Registrarse como Apoderado” en el login</span>
+          </label>
+          <div class="pt-2">
+            <button class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white shadow hover:bg-blue-700">
+              Guardar
+            </button>
+          </div>
+        </form>
+
+        <div class="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <p class="text-xs uppercase tracking-wide text-slate-500">Vista rápida</p>
+          <p class="mt-1 text-sm">
+            Estado actual:
+            {% if registro_habilitado %}
+              <span class="font-semibold text-green-600">Habilitado</span>
+            {% else %}
+              <span class="font-semibold text-rose-600">Deshabilitado</span>
+            {% endif %}
+          </p>
+        </div>
+      </section>
+    </div>
+
+    <!-- ===== Gestión de Roles de Usuarios ===== -->
+    <section class="mt-8 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <header class="mb-4 flex flex-col gap-1">
+        <h2 class="text-lg font-semibold text-slate-800">Gestión de Roles de Usuarios</h2>
+        <p class="text-xs text-slate-500">Asigna permisos por perfil dentro del sistema.</p>
+
+        <form method="get" class="mt-3 flex items-center gap-2">
+          <input
+            type="text" name="q" value="{{ q }}"
+            placeholder="Buscar por nombre, apellido o RUT"
+            class="w-full md:w-96 rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-800 placeholder:text-slate-400
+                   focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+          <button type="submit" class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-white shadow hover:bg-indigo-700">
+            Buscar
+          </button>
+        </form>
+      </header>
+
+      <div class="overflow-x-auto rounded-xl border border-slate-200">
+        <table class="min-w-full text-sm">
+          <thead class="bg-slate-100 text-slate-700">
+            <tr class="text-left">
+              <th class="px-4 py-2">RUN</th>
+              <th class="px-4 py-2">Nombre</th>
+              <th class="px-4 py-2">Email</th>
+              <th class="px-4 py-2">Rol</th>
+              <th class="px-4 py-2 text-right">Acción</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-200">
+            {% for u in usuarios %}
+            <tr id="row-{{ u.id_usuario }}" class="hover:bg-slate-50">
+              <td class="px-4 py-2 font-mono text-slate-700">{{ u.run }}</td>
+              <td class="px-4 py-2 text-slate-900">{{ u.nombre }} {{ u.apellido }}</td>
+              <td class="px-4 py-2 text-slate-600">{{ u.email|default:"—" }}</td>
+              <td class="px-4 py-2">
+                <select data-user="{{ u.id_usuario }}"
+                  class="rol-select w-full md:w-auto rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-slate-800
+                         focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                  {% for value,label in ROLES.items %}
+                    <option value="{{ value }}" {% if u.rol == value %}selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </td>
+              <td class="px-4 py-2">
+                <div class="flex justify-end gap-2">
+                  <button type="button"
+                    class="btn-guardar inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-3 py-1.5 text-white hover:bg-indigo-700"
+                    data-user="{{ u.id_usuario }}">
+                    Guardar
+                  </button>
+
+                  <button type="button"
+                    class="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-3 py-1.5 text-white hover:bg-amber-600"
+                    data-action="password" data-user="{{ u.id_usuario }}" data-nombre="{{ u.nombre }} {{ u.apellido }}">
+                    Cambiar Contraseña
+                  </button>
+
+                  <button type="button"
+                    class="btn-eliminar inline-flex items-center gap-2 rounded-lg bg-rose-600 px-3 py-1.5 text-white hover:bg-rose-700"
+                    data-user="{{ u.id_usuario }}">
+                    Eliminar
+                  </button>
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="5" class="px-4 py-6 text-center text-slate-500">No hay usuarios que coincidan con la búsqueda.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Modal Cambiar Contraseña -->
+    <div id="modalPassword" class="fixed inset-0 z-[9998] bg-black/50 hidden items-center justify-center">
+      <div class="bg-white rounded-xl shadow-lg w-full max-w-md p-6">
+        <h3 class="text-lg font-semibold text-slate-800 mb-1">Cambiar Contraseña</h3>
+        <p id="modalUserName" class="text-sm text-slate-500 mb-4"></p>
+
+        <div class="space-y-3">
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Nueva Contraseña</label>
+            <input type="password" id="newPassword" class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Confirmar Contraseña</label>
+            <input type="password" id="confirmPassword" class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-3 mt-5">
+          <button id="cancelPassword" type="button"
+            class="px-4 py-2 rounded-lg bg-slate-200 text-slate-700 hover:bg-slate-300 transition">
+            Cancelar
+          </button>
+          <button id="savePassword" type="button"
+            class="px-4 py-2 rounded-lg bg-amber-500 text-white hover:bg-amber-600 transition">
+            Guardar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== Permisos por Nivel (Básica / Media) ===== -->
+    <section class="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <header class="mb-4">
+        <h2 class="text-lg font-semibold text-slate-800">Permisos por Nivel (Básica / Media)</h2>
+        <p class="text-xs text-slate-500">Define qué puede hacer cada usuario en Básica o Media.</p>
+      </header>
+
+      <div class="overflow-x-auto rounded-xl border border-slate-200">
+        <table class="min-w-full text-sm">
+          <thead class="bg-slate-100 text-slate-700">
+            <tr>
+              <th class="px-4 py-2 text-left">RUN</th>
+              <th class="px-4 py-2 text-left">Usuario</th>
+              <th class="px-4 py-2 text-center border-l-2 border-slate-200">Básica</th>
+              <th class="px-4 py-2 text-center border-l-2 border-slate-200">Media</th>
+              <th class="px-4 py-2 text-right border-l-2 border-slate-200">Acción</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-200">
+            {% for u in usuarios %}
+            <tr class="hover:bg-slate-50">
+              <td class="px-4 py-2 font-mono text-slate-700">{{ u.run }}</td>
+              <td class="px-4 py-2 text-slate-900">{{ u.nombre }} {{ u.apellido }}</td>
+
+              <!-- BASICA -->
+              <td class="px-4 py-2 border-l-2 border-slate-200">
+                {% with p=u.permisos_nivel.all|get_perm:"BASICA" %}
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  <label class="inline-flex items-center gap-1">
+                    <input type="checkbox" class="perm" data-user="{{ u.id_usuario }}" data-nivel="BASICA" data-key="can_view"  {% if p and p.can_view  %}checked{% endif %}> Ver
+                  </label>
+                  <label class="inline-flex items-center gap-1">
+                    <input type="checkbox" class="perm" data-user="{{ u.id_usuario }}" data-nivel="BASICA" data-key="can_add"   {% if p and p.can_add   %}checked{% endif %}> Agregar
+                  </label>
+                  <label class="inline-flex items-center gap-1">
+                    <input type="checkbox" class="perm" data-user="{{ u.id_usuario }}" data-nivel="BASICA" data-key="can_edit"  {% if p and p.can_edit  %}checked{% endif %}> Editar
+                  </label>
+                  <label class="inline-flex items-center gap-1">
+                    <input type="checkbox" class="perm" data-user="{{ u.id_usuario }}" data-nivel="BASICA" data-key="can_print" {% if p and p.can_print %}checked{% endif %}> Imprimir
+                  </label>
+                </div>
+                {% endwith %}
+              </td>
+
+              <!-- MEDIA -->
+              <td class="px-4 py-2 border-l-2 border-slate-200">
+                {% with p=u.permisos_nivel.all|get_perm:"MEDIA" %}
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  <label class="inline-flex items-center gap-1">
+                    <input type="checkbox" class="perm" data-user="{{ u.id_usuario }}" data-nivel="MEDIA" data-key="can_view"  {% if p and p.can_view  %}checked{% endif %}> Ver
+                  </label>
+                  <label class="inline-flex items-center gap-1">
+                    <input type="checkbox" class="perm" data-user="{{ u.id_usuario }}" data-nivel="MEDIA" data-key="can_add"   {% if p and p.can_add   %}checked{% endif %}> Agregar
+                  </label>
+                  <label class="inline-flex items-center gap-1">
+                    <input type="checkbox" class="perm" data-user="{{ u.id_usuario }}" data-nivel="MEDIA" data-key="can_edit"  {% if p and p.can_edit  %}checked{% endif %}> Editar
+                  </label>
+                  <label class="inline-flex items-center gap-1">
+                    <input type="checkbox" class="perm" data-user="{{ u.id_usuario }}" data-nivel="MEDIA" data-key="can_print" {% if p and p.can_print %}checked{% endif %}> Imprimir
+                  </label>
+                </div>
+                {% endwith %}
+              </td>
+
+              <!-- ACCIÓN -->
+              <td class="px-4 py-2 text-right border-l-2 border-slate-200">
+                <button class="btn-guardar-perm rounded-lg bg-emerald-600 px-3 py-1.5 text-white hover:bg-emerald-700"
+                        data-user="{{ u.id_usuario }}">
+                  Guardar permisos
+                </button>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="5" class="px-4 py-6 text-center text-slate-500">No hay usuarios.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===== Copiar Estudiantes → Matrícula Anual ===== -->
+    <section class="mt-8 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <header class="mb-4">
+        <h2 class="text-lg font-semibold text-slate-800">Copiar Estudiantes al Año (Matrícula Anual)</h2>
+        <p class="text-xs text-slate-500">Genera/actualiza las matrículas anuales desde los datos actuales.</p>
+      </header>
+
+      <form id="form-seed-anio" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {% csrf_token %}
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Año destino</label>
+          <input type="number" name="anio" value="{{ anio_actual|default:2026 }}" required
+                 class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+
+        <label class="flex items-center gap-2 mt-6">
+          <input type="checkbox" name="only_activos" checked class="rounded border-slate-300">
+          <span class="text-sm text-slate-700">Sólo estudiantes Activos</span>
+        </label>
+
+        <label class="flex items-center gap-2 mt-6">
+          <input type="checkbox" name="overwrite" class="rounded border-slate-300">
+          <span class="text-sm text-slate-700">Sobrescribir si ya existe</span>
+        </label>
+
+        <div class="md:col-span-1 mt-2 md:mt-6">
+          <button id="btn-seed" type="submit"
+                  class="w-full rounded-lg bg-emerald-600 px-4 py-2 text-white shadow hover:bg-emerald-700 disabled:opacity-60">
+            Copiar ahora
+          </button>
+        </div>
+      </form>
+
+      <div id="seed-result" class="mt-4 hidden rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700"></div>
+    </section>
+
+    <!-- ===== Clonar Año A → Año B ===== -->
+    <section class="mt-8 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <header class="mb-4">
+        <h2 class="text-lg font-semibold text-slate-800">Clonar año A → año B</h2>
+        <p class="text-xs text-slate-500">
+          Crea matrículas del año destino a partir del año origen (útil para avanzar todos los alumnos de 2025 a 2026).
+        </p>
+      </header>
+
+      <form id="form-clonar-anio" class="grid grid-cols-1 md:grid-cols-6 gap-4">
+        <div class="md:col-span-2">
+          <label class="block text-sm font-medium text-slate-700 mb-1">Año origen</label>
+          <input type="number" name="source_year" id="source_year" placeholder="Ej: 2025"
+                 class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-2 focus:ring-indigo-500" required>
+          <p class="mt-1 text-xs text-slate-500">Desde este año se tomarán las matrículas o estudiantes.</p>
+        </div>
+
+        <div class="md:col-span-2">
+          <label class="block text-sm font-medium text-slate-700 mb-1">Año destino</label>
+          <input type="number" name="target_year" id="target_year" placeholder="Ej: 2026"
+                 class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-2 focus:ring-indigo-500" required>
+          <p class="mt-1 text-xs text-slate-500">Aquí se crearán/actualizarán las matrículas.</p>
+        </div>
+
+        <div class="md:col-span-2 grid grid-cols-1 gap-2 content-end">
+          <label class="inline-flex items-center gap-2">
+            <input type="checkbox" id="only_activos" class="h-4 w-4">
+            <span class="text-sm">Sólo estudiantes Activos</span>
+          </label>
+          <label class="inline-flex items-center gap-2">
+            <input type="checkbox" id="promote_courses" class="h-4 w-4">
+            <span class="text-sm">Promover curso automáticamente</span>
+          </label>
+          <label class="inline-flex items-center gap-2">
+            <input type="checkbox" id="overwrite" class="h-4 w-4">
+            <span class="text-sm">Sobrescribir si ya existen</span>
+          </label>
+        </div>
+
+        <div class="md:col-span-4">
+          <label class="block text-sm font-medium text-slate-700 mb-1">Nombre del snapshot (opcional)</label>
+          <input type="text" id="snapshot_name" placeholder='Ej: "Estudiantes año 2025 final"'
+                 class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+          <p class="mt-1 text-xs text-slate-500">Se guarda como referencia de esta clonación.</p>
+        </div>
+
+        <div class="md:col-span-2 flex items-end justify-end">
+          <button type="button" id="btn-clonar-anio"
+                  class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-white shadow hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed">
+            <svg id="spinner" class="hidden h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
+              <path class="opacity-75" d="M4 12a8 8 0 018-8" stroke="currentColor" stroke-width="3"></path>
+            </svg>
+            <span id="btn-text">Clonar año</span>
+          </button>
+        </div>
+
+        <div class="md:col-span-6">
+          <details class="rounded-lg border border-slate-200 bg-white p-4">
+            <summary class="cursor-pointer select-none text-sm font-medium text-slate-700">Opciones avanzadas</summary>
+
+            <div class="mt-4 grid grid-cols-1 md:grid-cols-6 gap-4">
+              <label class="md:col-span-2 inline-flex items-center gap-2">
+                <input type="checkbox" id="auto_create_courses" class="h-4 w-4">
+                <span class="text-sm">Crear cursos destino que falten</span>
+              </label>
+
+              <div class="md:col-span-2">
+                <label class="block text-sm font-medium text-slate-700 mb-1">Placeholder “Sin Nivel”</label>
+                <select id="placeholder_level"
+                        class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+                  <option value="">— No usar —</option>
+                  <option>Por Asignar</option>
+                  <option>Prekinder</option>
+                  <option>Kinder</option>
+                  <option>1° Básico</option>
+                  <option>2° Básico</option>
+                  <option>3° Básico</option>
+                  <option>4° Básico</option>
+                  <option>5° Básico</option>
+                  <option>6° Básico</option>
+                  <option>7° Básico</option>
+                  <option>8° Básico</option>
+                  <option>1° Medio</option>
+                  <option>2° Medio</option>
+                  <option>3° Medio</option>
+                  <option>4° Medio</option>
+                  <option>Egresados</option>
+                </select>
+                <p class="mt-1 text-xs text-slate-500">Se usará cuando el alumno origen no tenga curso (nivel válido en <code>Curso</code>).</p>
+              </div>
+
+              <div class="md:col-span-2">
+                <label class="block text-sm font-medium text-slate-700 mb-1">Curso de egreso (4° Medio)</label>
+                <select id="graduate_level"
+                        class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+                  <option value="">— No usar —</option>
+                  <option>Egresados</option>
+                </select>
+                <p class="mt-1 text-xs text-slate-500">Nivel a asignar al promover desde 4° Medio.</p>
+              </div>
+            </div>
+          </details>
+        </div>
+      </form>
+
+      <div id="clone-result" class="mt-4 hidden rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-800"></div>
+    </section>
+
+    <!-- =================================================================== -->
+    <!-- ================ EXPORTAR / IMPORTAR (al final del panel) ========= -->
+    <!-- =================================================================== -->
+    <section class="mt-8 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <header class="mb-4">
+        <h2 class="text-lg font-semibold text-slate-800">Exportar / Importar Datos</h2>
+        <p class="text-xs text-slate-500">
+          Exporta o importa datos seleccionando datasets específicos. Los años están limitados a los <b>visibles</b>.
+        </p>
+      </header>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Exportar -->
+        <div class="rounded-xl border border-slate-200 p-4">
+          <h3 class="font-semibold text-slate-800 mb-3">Exportar</h3>
+          <form id="form-export" method="get" action="{% url 'export_datos' %}" class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-slate-700 mb-1">Año</label>
+              <select name="anio" required class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+                <option value="" disabled selected>— Selecciona —</option>
+                {% for y in anios_disponibles %}
+                  {% if y.is_visible %}
+                    <option value="{{ y.anio }}">{{ y.anio }}</option>
+                  {% endif %}
+                {% endfor %}
+              </select>
+              <p class="text-xs text-slate-500 mt-1">Solo años marcados como <b>visibles</b>.</p>
+            </div>
+
+            <fieldset class="border border-slate-200 rounded-lg p-3">
+              <legend class="text-sm text-slate-700 px-1">Datasets</legend>
+              <div class="grid grid-cols-2 gap-2 text-sm">
+                <label class="inline-flex items-center gap-2">
+                  <input type="checkbox" name="datasets" value="estudiantes" class="accent-indigo-600" checked>
+                  Estudiantes (base)
+                </label>
+                <label class="inline-flex items-center gap-2">
+                  <input type="checkbox" name="datasets" value="matriculas" class="accent-indigo-600" checked>
+                  Matrícula Anual
+                </label>
+                <label class="inline-flex items-center gap-2">
+                  <input type="checkbox" name="datasets" value="cursos" class="accent-indigo-600">
+                  Cursos
+                </label>
+                <label class="inline-flex items-center gap-2">
+                  <input type="checkbox" name="datasets" value="usuarios" class="accent-indigo-600">
+                  Usuarios
+                </label>
+              </div>
+            </fieldset>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <label class="inline-flex items-center gap-2 text-sm">
+                <input type="checkbox" name="solo_activos" class="accent-indigo-600">
+                Solo Activos
+              </label>
+              <label class="inline-flex items-center gap-2 text-sm">
+                <input type="checkbox" name="incluir_sin_nivel" class="accent-indigo-600" checked>
+                Incluir “Por Asignar / Sin Nivel”
+              </label>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Formato</label>
+                <select name="formato" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+                  <option value="csv">CSV (separador coma)</option>
+                  <option value="json">JSON</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Separador CSV</label>
+                <select name="sep" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+                  <option value=",">, (coma)</option>
+                  <option value=";">; (punto y coma)</option>
+                  <option value="|">| (pipe)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="pt-1">
+              <button type="submit"
+                      class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-white shadow hover:bg-indigo-700">
+                Exportar
+              </button>
+         
+            </div>
+
+          </form>
+        </div>
+
+        <!-- Importar -->
+        <div class="rounded-xl border border-slate-200 p-4">
+          <h3 class="font-semibold text-slate-800 mb-3">Importar</h3>
+          <form id="form-import" method="post" enctype="multipart/form-data" action="{% url 'import_datos_panel' %}" class="space-y-4">
+            {% csrf_token %}
+            <div>
+              <label class="block text-sm font-medium text-slate-700 mb-1">Año de destino</label>
+              <select name="anio_destino" required class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+                <option value="" disabled selected>— Selecciona —</option>
+                {% for y in anios_disponibles %}
+                  {% if y.is_visible %}
+                    <option value="{{ y.anio }}">{{ y.anio }}</option>
+                  {% endif %}
+                {% endfor %}
+              </select>
+              <p class="text-xs text-slate-500 mt-1">Solo años marcados como <b>visibles</b>.</p>
+            </div>
+
+            <fieldset class="border border-slate-200 rounded-lg p-3">
+              <legend class="text-sm text-slate-700 px-1">Datasets</legend>
+              <div class="grid grid-cols-2 gap-2 text-sm">
+                <label class="inline-flex items-center gap-2">
+                  <input type="checkbox" name="datasets" value="estudiantes" class="accent-indigo-600" checked>
+                  Estudiantes (base)
+                </label>
+                <label class="inline-flex items-center gap-2">
+                  <input type="checkbox" name="datasets" value="matriculas" class="accent-indigo-600" checked>
+                  Matrícula Anual
+                </label>
+                <label class="inline-flex items-center gap-2">
+                  <input type="checkbox" name="datasets" value="cursos" class="accent-indigo-600">
+                  Cursos
+                </label>
+                <label class="inline-flex items-center gap-2">
+                  <input type="checkbox" name="datasets" value="usuarios" class="accent-indigo-600">
+                  Usuarios
+                </label>
+              </div>
+            </fieldset>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Archivo</label>
+                <input type="file" name="archivo" accept=".csv,.json" required
+                       class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 bg-white">
+                <p class="text-xs text-slate-500 mt-1">Formatos permitidos: CSV / JSON.</p>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Modo</label>
+                <select name="modo" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+                  <option value="upsert">Upsert (actualiza o crea)</option>
+                  <option value="insert_only">Solo insertar (ignora existentes)</option>
+                  <option value="overwrite">Sobrescribir (reemplaza existentes)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <label class="inline-flex items-center gap-2 text-sm">
+                <input type="checkbox" name="validate_only" class="accent-indigo-600">
+                Solo validar (no guarda)
+              </label>
+              <label class="inline-flex items-center gap-2 text-sm">
+                <input type="checkbox" name="permitir_sin_nivel" class="accent-indigo-600" checked>
+                Permitir “Por Asignar / Sin Nivel”
+              </label>
+            </div>
+
+            <div class="pt-1">
+              <button type="submit" id="btn-importar"
+                      class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-white shadow hover:bg-emerald-700">
+                Importar
+              </button>
+            </div>
+            <p class="text-xs text-slate-500">Sugerencia: importa primero <b>Cursos</b> si vas a cargar matrículas con curso asignado.</p>
+          </form>
+        </div>
+      </div>
+
+      <!-- ============================== -->
+      <!-- Importar desde SQL (dump)      -->
+      <!-- ============================== -->
+      <div class="rounded-xl border border-slate-200 p-4">
+        <h3 class="font-semibold text-slate-800 mb-3">Importar desde SQL (.sql)</h3>
+        <form id="form-import-sql" method="post" enctype="multipart/form-data" action="{% url 'importar_sql_dump' %}" class="space-y-4">
+          {% csrf_token %}
+
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Año de destino</label>
+            <select name="anio_destino" required class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+              <option value="" disabled selected>— Selecciona —</option>
+              {% for y in anios_disponibles %}
+                {% if y.is_visible %}
+                  <option value="{{ y.anio }}">{{ y.anio }}</option>
+                {% endif %}
+              {% endfor %}
+            </select>
+            <p class="text-xs text-slate-500 mt-1">Solo años marcados como <b>visibles</b>.</p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-slate-700 mb-1">Archivo .sql</label>
+              <input type="file" name="dump_sql" accept=".sql" required
+                    class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500 bg-white">
+              <p class="text-xs text-slate-500 mt-1">Usa el dump con <b>INSERT con nombres de columnas</b> (mysqldump --complete-insert).</p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-slate-700 mb-1">Opciones</label>
+              <label class="inline-flex items-center gap-2 text-sm">
+                <input type="checkbox" name="permitir_sin_nivel" class="accent-emerald-600" checked>
+                Permitir curso “Sin asignar” si no se reconoce el nivel
+              </label>
+            </div>
+          </div>
+
+          <div class="pt-1">
+            <button type="submit" class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-white shadow hover:bg-emerald-700">
+              Importar .SQL
+            </button>
+          </div>
+          <p class="text-xs text-slate-500">Este proceso ejecuta el importador interno y mostrará un log al final del panel.</p>
+        </form>
+      </div>
+
+
+
+    </section>
+          <!-- ======================================================= -->
+      <!-- ===== Panel pequeño: Registro de actividad (visual) ==== -->
+      <!-- ======================================================= -->
+      <section class="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <header class="mb-3 flex items-center justify-between">
+          <h3 class="text-base font-semibold text-slate-800">Registro de actividad</h3>
+          <div class="flex items-center gap-2">
+            <button id="btn-log-expand"
+                    type="button"
+                    class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100">
+              Mostrar/Ocultar
+            </button>
+            <button id="btn-log-clear"
+                    type="button"
+                    class="px-3 py-1.5 rounded-lg bg-rose-600 text-white hover:bg-rose-700">
+              Limpiar historial
+            </button>
+          </div>
+        </header>
+
+        <div id="log-box" class="rounded-lg border border-slate-200 bg-slate-50 p-3 max-h-56 overflow-auto">
+          <ul id="log-list" class="space-y-2 text-sm text-slate-700">
+            <!-- Se llena por JS -->
+          </ul>
+          <div id="log-empty" class="text-sm text-slate-500">Aún no hay actividad.</div>
+        </div>
+
+        <p class="mt-2 text-xs text-slate-500">
+          * Este historial es <b>local del navegador</b> (no se guarda en el servidor). Se agregan entradas al usar Exportar/Importar.
+        </p>
+      </section>
+
+  </div>
+</section>
+
+<style>
+  .form-card input[type="text"],
+  .form-card input[type="number"],
+  .form-card input[type="file"],
+  .form-card input[type="date"],
+  .form-card select,
+  .form-card textarea {
+    width: 100%;
+    border: 1px solid rgb(226 232 240);
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    color: rgb(15 23 42);
+    background: white;
+  }
+  .form-card input:focus,
+  .form-card select:focus,
+  .form-card textarea:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(79,70,229,.35);
+    border-color: rgb(99 102 241);
+  }
+  [x-cloak] { display: none !important; }
+</style>
+
+<script>
+  function getCookie(name) {
+    const m = document.cookie.match('(?:^|; )' + name.replace(/([.$?*|{}()\\[\\]\\\\+^])/g,'\\$1') + '=([^;]*)');
+    return m ? decodeURIComponent(m[1]) : '';
+  }
+  function getCsrfToken() {
+    const inp = document.querySelector('input[name="csrfmiddlewaretoken"]');
+    return (inp && inp.value) || getCookie('csrftoken') || '';
+  }
+  function toast(msg, type){
+    const el = document.createElement('div');
+    el.className = `fixed top-5 right-5 z-[9999] px-4 py-3 rounded-xl text-white shadow-lg ${type==='success'?'bg-green-600':'bg-red-600'}`;
+    el.textContent = msg;
+    document.body.appendChild(el);
+    setTimeout(()=>{ el.style.opacity='0'; el.style.transition='opacity .6s'; setTimeout(()=>el.remove(),700); }, 2000);
+  }
+</script>
+
+<script>
+  (function () {
+    const tituloInput = document.querySelector('#form-matricula [name="titulo"]');
+    const anioInput   = document.querySelector('#form-matricula [name="anio"]');
+    const preview     = document.getElementById('tituloPreview');
+    function updatePreview() {
+      if (!preview) return;
+      const titulo = (tituloInput?.value ?? '').toString();
+      const anio   = (anioInput?.value ?? '').toString();
+      preview.textContent = titulo.replaceAll('{anio}', anio || '—');
+    }
+    tituloInput && tituloInput.addEventListener('input', updatePreview);
+    anioInput && anioInput.addEventListener('input', updatePreview);
+    updatePreview();
+  })();
+</script>
+
+<script>
+  async function postFormUrlEncoded(url, dataObj) {
+    const body = new URLSearchParams(dataObj);
+    const res = await fetch(url, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'X-CSRFToken': getCsrfToken(),
+        'X-Requested-With': 'XMLHttpRequest',
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body
+    });
+    let data = null;
+    try { data = await res.json(); } catch {}
+    if (!res.ok) {
+      const msg = (data && (data.error || data.detail)) || 'Error de servidor';
+      throw new Error(msg);
+    }
+    return data || { ok: true };
+  }
+
+  document.querySelectorAll('.btn-guardar').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const userId = btn.dataset.user;
+      const select = document.querySelector(`select.rol-select[data-user="${userId}"]`);
+      const rol = select ? select.value : null;
+      if (!rol)  return toast('Selecciona un rol', 'error');
+
+      try {
+        const data = await postFormUrlEncoded("{% url 'actualizar_rol_usuario' %}", { user_id: userId, rol });
+        data.ok ? toast('Rol actualizado correctamente', 'success') : toast(data.error || 'No se pudo actualizar el rol', 'error');
+      } catch (e) {
+        console.error(e); toast(e.message || 'Error de red al actualizar el rol', 'error');
+      }
+    });
+  });
+</script>
+
+<script>
+  const modal = document.getElementById('modalPassword');
+  const modalUserName = document.getElementById('modalUserName');
+  const newPassword = document.getElementById('newPassword');
+  const confirmPassword = document.getElementById('confirmPassword');
+  const cancelBtn = document.getElementById('cancelPassword');
+  const saveBtn = document.getElementById('savePassword');
+  let currentUserId = null;
+
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-action="password"]');
+    if (!btn) return;
+    e.preventDefault();
+    currentUserId = btn.dataset.user || null;
+    modalUserName.textContent = btn.dataset.nombre ? `Usuario: ${btn.dataset.nombre}` : '';
+    modal.classList.remove('hidden'); modal.classList.add('flex');
+    newPassword.value = ''; confirmPassword.value = ''; newPassword.focus();
+  });
+
+  const closeModal = () => { modal.classList.add('hidden'); modal.classList.remove('flex'); };
+  cancelBtn.addEventListener('click', (e) => { e.preventDefault(); closeModal(); });
+  modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModal(); });
+
+  saveBtn.addEventListener('click', async (e) => {
+    e.preventDefault();
+    const p1 = newPassword.value.trim(), p2 = confirmPassword.value.trim();
+    if (!currentUserId) return toast('Falta el ID de usuario', 'error');
+    if (!p1 || !p2)    return toast('Completa ambos campos', 'error');
+    if (p1 !== p2)     return toast('Las contraseñas no coinciden', 'error');
+    if (p1.length < 6) return toast('Debe tener al menos 6 caracteres', 'error');
+
+    try {
+      const res = await fetch("{% url 'cambiar_password_usuario' %}", {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': getCsrfToken(),
+          'X-Requested-With': 'XMLHttpRequest',
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: new URLSearchParams({ user_id: currentUserId, password: p1 })
+      });
+
+      if (res.redirected) { window.location.href = res.url; return; }
+      let data = {}; try { data = await res.json(); } catch {}
+      if (res.ok && data.ok) { toast('Contraseña actualizada correctamente', 'success'); closeModal(); }
+      else { toast((data && (data.error || data.detail)) || 'Error al actualizar la contraseña', 'error'); }
+    } catch (err) {
+      console.error(err); toast('Error de red al actualizar la contraseña', 'error');
+    }
+  });
+</script>
+
+<script>
+  document.addEventListener('click', async (ev) => {
+    const btn = ev.target.closest('.btn-guardar-perm');
+    if (!btn) return;
+
+    const userId = btn.dataset.user;
+    if (!userId) return toast('Falta user_id', 'error');
+
+    const niveles = ['BASICA','MEDIA'];
+    try {
+      for (const nivel of niveles) {
+        const inputs = document.querySelectorAll(`.perm[data-user="${userId}"][data-nivel="${nivel}"]`);
+        if (!inputs.length) continue;
+
+        const flags = { can_view:false, can_add:false, can_edit:false, can_print:false };
+        inputs.forEach(i => { flags[i.dataset.key] = !!i.checked; });
+
+        const payload = new URLSearchParams();
+        payload.append('user_id', userId);
+        payload.append('nivel', nivel);
+        for (const [k, v] of Object.entries(flags)) payload.append(k, v ? 'true' : 'false');
+
+        const res = await fetch("{% url 'actualizar_permisos_usuario' %}", {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': getCsrfToken(),
+            'Content-Type': 'application/x-www-form-urlencoded'
+          },
+          body: payload
+        });
+
+        if (res.redirected) { window.location.href = res.url; return; }
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.ok) throw new Error((data && data.error) || `Error guardando permisos ${nivel}`);
+      }
+      toast('Permisos actualizados', 'success');
+    } catch (e) {
+      console.error(e); toast(e.message || 'Error al guardar permisos', 'error');
+    }
+  });
+</script>
+
+<script>
+(function gestionarCursos(){
+  const ROWS_PER_PAGE = 10;
+  const tbody = document.getElementById('tabla-cursos');
+  if (!tbody) return;
+
+  const filtroAnio = document.getElementById('filtro-anio');
+  const btnPrev = document.getElementById('btn-prev');
+  const btnNext = document.getElementById('btn-next');
+  const pagerInfo = document.getElementById('pager-info');
+  const contador = document.getElementById('contador-cursos');
+
+  let allRows = Array.from(tbody.querySelectorAll('tr[data-year]'));
+  let filteredRows = allRows.slice();
+  let page = 1;
+
+  // Poblar select de años (únicos, orden descendente)
+  const years = Array.from(new Set(allRows.map(r => parseInt(r.dataset.year, 10))))
+    .filter(n => !isNaN(n))
+    .sort((a,b)=>b-a);
+  years.forEach(y => {
+    const opt = document.createElement('option');
+    opt.value = String(y);
+    opt.textContent = String(y);
+    filtroAnio.appendChild(opt);
+  });
+
+  function applyFilter(){
+    const y = filtroAnio.value.trim();
+    filteredRows = allRows.filter(r => !y || r.dataset.year === y);
+    page = 1;
+    render();
+  }
+
+  function render(){
+    // Ocultar todas
+    allRows.forEach(r => r.style.display = 'none');
+
+    const total = filteredRows.length;
+    const totalPages = Math.max(1, Math.ceil(total / ROWS_PER_PAGE));
+    page = Math.min(page, totalPages);
+
+    const start = (page - 1) * ROWS_PER_PAGE;
+    const end = start + ROWS_PER_PAGE;
+    filteredRows.slice(start, end).forEach(r => r.style.display = '');
+
+    pagerInfo.textContent = `Página ${total ? page : 0} / ${total ? totalPages : 0}`;
+    btnPrev.disabled = (page <= 1);
+    btnNext.disabled = (page >= totalPages);
+    contador.textContent = `${Math.min(ROWS_PER_PAGE, Math.max(0, total - start))} de ${total}`;
+  }
+
+  filtroAnio.addEventListener('change', applyFilter);
+  btnPrev.addEventListener('click', () => { if (page > 1) { page--; render(); } });
+  btnNext.addEventListener('click', () => {
+    const totalPages = Math.max(1, Math.ceil(filteredRows.length / ROWS_PER_PAGE));
+    if (page < totalPages) { page++; render(); }
+  });
+
+  // Render inicial
+  applyFilter();
+})();
+</script>
+
+<!-- Export/Import: confirmaciones rápidas -->
+
+<script>
+  document.getElementById('form-export')?.addEventListener('submit', (e) => {
+    const form = e.currentTarget;
+    const anio = form.querySelector('select[name="anio"]').value;
+    const datasets = Array.from(form.querySelectorAll('input[name="datasets"]:checked')).map(i=>i.value);
+
+    if (!anio) { e.preventDefault(); toast('Selecciona un año visible', 'error'); return; }
+    if (!datasets.length) { e.preventDefault(); toast('Selecciona al menos un dataset para exportar', 'error'); return; }
+
+    const ok = confirm(`Exportar ${datasets.join(', ')} para el año ${anio}?`);
+    if (!ok) e.preventDefault();
+  });
+
+  document.getElementById('form-import')?.addEventListener('submit', (e) => {
+    const form = e.currentTarget;
+    const anio = form.querySelector('select[name="anio_destino"]').value;
+    const file = form.querySelector('input[name="archivo"]').files[0];
+    const datasets = Array.from(form.querySelectorAll('input[name="datasets"]:checked')).map(i=>i.value);
+    const modo = form.querySelector('select[name="modo"]').value;
+
+    if (!anio) { e.preventDefault(); toast('Selecciona el año de destino', 'error'); return; }
+    if (!file) { e.preventDefault(); toast('Debes seleccionar un archivo CSV o JSON', 'error'); return; }
+    if (!datasets.length) { e.preventDefault(); toast('Selecciona al menos un dataset para importar', 'error'); return; }
+
+    const ok = confirm(`Importar ${datasets.join(', ')} en modo ${modo} hacia el año ${anio}?`);
+    if (!ok) e.preventDefault();
+  });
+</script>
+
+
+
+<!-- //PAnel log// -->
+
+<script>
+(function panelLogs(){
+  const KEY = 'panel_logs_v1';
+  const $list  = document.getElementById('log-list');
+  const $empty = document.getElementById('log-empty');
+  const $box   = document.getElementById('log-box');
+  const $btnClear  = document.getElementById('btn-log-clear');
+  const $btnExpand = document.getElementById('btn-log-expand');
+
+  function loadLogs(){
+    try { return JSON.parse(localStorage.getItem(KEY) || '[]'); }
+    catch { return []; }
+  }
+  function saveLogs(arr){
+    try { localStorage.setItem(KEY, JSON.stringify(arr.slice(0, 100))); } catch {}
+  }
+  function fmtDate(d){
+    const pad = n => String(n).padStart(2,'0');
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  }
+  function render(){
+    const logs = loadLogs();
+    $list.innerHTML = '';
+    if (!logs.length){
+      $empty.style.display = '';
+      return;
+    }
+    $empty.style.display = 'none';
+    logs.forEach(item => {
+      const li = document.createElement('li');
+      li.className = 'bg-white border border-slate-200 rounded-md px-3 py-2';
+      li.innerHTML = `
+        <div class="flex items-center justify-between">
+          <span class="font-medium">${item.tipo}</span>
+          <span class="text-xs text-slate-500">${item.timestamp}</span>
+        </div>
+        <div class="mt-1 text-slate-700 break-words">${item.detalle}</div>
+      `;
+      $list.appendChild(li);
+    });
+  }
+  function add(tipo, detalle){
+    const logs = loadLogs();
+    logs.unshift({
+      tipo: tipo || 'Acción',
+      detalle: detalle || '',
+      timestamp: fmtDate(new Date())
+    });
+    saveLogs(logs);
+    render();
+  }
+  window.panelLogsAdd = add;  // expone para que otros scripts puedan registrar
+
+  $btnClear?.addEventListener('click', () => {
+    if (!confirm('¿Limpiar historial local de actividad?')) return;
+    saveLogs([]);
+    render();
+  });
+  $btnExpand?.addEventListener('click', () => {
+    $box.classList.toggle('max-h-56');
+    $box.classList.toggle('max-h-none');
+  });
+
+  // ------ Hooks automáticos para Exportar / Importar ------
+  const expForm = document.getElementById('form-export');
+  if (expForm){
+    expForm.addEventListener('submit', () => {
+      try {
+        const anio = expForm.querySelector('select[name="anio"]')?.value || '—';
+        const datasets = Array.from(expForm.querySelectorAll('input[name="datasets"]:checked')).map(i=>i.value);
+        const formato = expForm.querySelector('select[name="formato"]')?.value || 'csv';
+        const sep     = expForm.querySelector('select[name="sep"]')?.value || ',';
+        const soloAct = expForm.querySelector('input[name="solo_activos"]')?.checked ? ' | solo activos' : '';
+        const incSN   = expForm.querySelector('input[name="incluir_sin_nivel"]')?.checked ? ' | incluye sin nivel' : '';
+        add('Exportación', `Año ${anio} | ${datasets.join(', ')} | ${formato}${formato==='csv' ? ' (sep="'+sep+'")' : ''}${soloAct}${incSN}`);
+      } catch(e){}
+    }, { capture: true });
+  }
+
+  const impForm = document.getElementById('form-import');
+  if (impForm){
+    impForm.addEventListener('submit', () => {
+      try {
+        const anio = impForm.querySelector('select[name="anio_destino"]')?.value || '—';
+        const datasets = Array.from(impForm.querySelectorAll('input[name="datasets"]:checked')).map(i=>i.value);
+        const modo   = impForm.querySelector('select[name="modo"]')?.value || 'upsert';
+        const file   = impForm.querySelector('input[name="archivo"]')?.files?.[0]?.name || '(sin nombre)';
+        const validar = impForm.querySelector('input[name="validate_only"]')?.checked ? ' | solo validar' : '';
+        const psn    = impForm.querySelector('input[name="permitir_sin_nivel"]')?.checked ? ' | permitir sin nivel' : '';
+        add('Importación', `Año ${anio} | ${datasets.join(', ')} | modo: ${modo} | archivo: ${file}${validar}${psn}`);
+      } catch(e){}
+    }, { capture: true });
+  }
+
+  // Render inicial
+  render();
+})();
+</script>
+
+ <!-- import desde sql -->
+
+ <script>
+  document.getElementById('form-import-sql')?.addEventListener('submit', (e) => {
+    const form = e.currentTarget;
+    const anio = form.querySelector('select[name="anio_destino"]').value;
+    const file = form.querySelector('input[name="dump_sql"]').files[0];
+    if (!file) { e.preventDefault(); alert('Selecciona un archivo .sql'); return; }
+    if (!anio) { e.preventDefault(); alert('Selecciona un año destino'); return; }
+    if (!confirm(`Importar dump SQL hacia el año ${anio}?`)) e.preventDefault();
+  });
+  </script>
+
+{% endblock %}

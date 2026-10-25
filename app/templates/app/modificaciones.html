@@ -1,0 +1,555 @@
+@role_required(*PERMITIDOS_TODOS)
+def imprimir_estudiante(request, rut):
+    # Permite forzar año por querystring: ?anio=2026
+    try:
+        anio_forzado = int(request.GET.get('anio')) if request.GET.get('anio') else None
+    except ValueError:
+        anio_forzado = None
+
+    rut_param = _norm_rut(rut)
+
+    # Base de búsqueda por RUT
+    base_est = Estudiante.objects.select_related('curso', 'matriculado_por')
+
+    estudiante = base_est.filter(rut=rut_param).first()
+    if not estudiante and rut_param.isdigit():
+        estudiante = base_est.filter(rut__startswith=rut_param).order_by('rut').first()
+    if not estudiante:
+        raise Http404("Estudiante no encontrado con el RUT indicado.")
+
+    # Toma la MA del año forzado, si no, la más reciente
+    ma_qs = MatriculaAnual.objects.filter(estudiante=estudiante).select_related('curso')
+    if anio_forzado:
+        ma = ma_qs.filter(anio=anio_forzado).order_by('-id').first()
+    else:
+        ma = ma_qs.order_by('-anio', '-id').first()
+
+    curso_view = getattr(ma, 'curso', None) or getattr(estudiante, 'curso', None)
+    anio_view = getattr(curso_view, 'anio', None)
+
+    # Permisos por nivel con el curso a mostrar
+    nivel_perm = _nivel_from_curso_obj(curso_view)
+    if nivel_perm is None:
+        if getattr(request.user, 'rol', None) != 'ADMINISTRADOR':
+            raise PermissionDenied("Estudiante sin curso asignado: solo Administrador puede imprimir.")
+    else:
+        if not has_perm_on_nivel(request.user, 'print', nivel_perm):
+            raise PermissionDenied(f"No tienes permiso para imprimir estudiantes de {nivel_perm.title()}.")
+
+    # Título
+    cfg = ConfiguracionMatricula.objects.filter(activa=True).first()
+    titulo_matricula = cfg.titulo_resuelto() if cfg else f"FICHA DE INSCRIPCIÓN DE MATRÍCULA {anio_view or ''}"
+
+    # ------- PDF -------
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
+    elements = []
+    styles = getSampleStyleSheet()
+
+    label_style = ParagraphStyle('label', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=9, leading=11)
+    value_style = ParagraphStyle('value', parent=styles['Normal'], fontName='Helvetica', fontSize=9, leading=11)
+    section_style = ParagraphStyle('section', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=10,
+                                   textColor=colors.HexColor('#374151'), spaceBefore=6, spaceAfter=4)
+
+    def make_info_table(pairs, col_widths=(170, 340)):
+        data = [
+            [Paragraph(str(k), label_style),
+             Paragraph('N/A' if v in [None, ''] else str(v), value_style)]
+            for k, v in pairs
+        ]
+        t = Table(data, colWidths=list(col_widths), hAlign='LEFT')
+        t.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 6),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+            ('TOPPADDING', (0, 0), (-1, -1), 3),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+            ('LINEBELOW', (0, 0), (-1, -2), 0.25, colors.HexColor('#e5e7eb')),
+        ]))
+        return t
+
+    # Encabezado
+    logo_path = './app/static/app/img/logo.png'
+    header_text = Paragraph(
+        "LICEO MUNICIPAL DE SAN PEDRO<br/>"
+        "R.B.D 10854-5. Carretera de la Fruta km 9.5, San Pedro de Melipilla.<br/>"
+        "Provincia de Melipilla, Región Metropolitana.",
+        ParagraphStyle('hdr', parent=styles['Normal'], alignment=1, fontSize=8, leading=10)
+    )
+    if os.path.exists(logo_path):
+        header_tbl = Table([[Image(logo_path, width=40, height=40), header_text]], colWidths=[50, 460])
+    else:
+        header_tbl = Table([[header_text]], colWidths=[510])
+    header_tbl.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+    ]))
+    elements.append(header_tbl)
+
+    # Título + subtítulo con el curso/año desde MA (si existe)
+    elements.append(Paragraph(titulo_matricula, ParagraphStyle('t', parent=styles['Heading1'], alignment=1, fontSize=14, spaceAfter=4)))
+    if curso_view:
+        elements.append(Paragraph(
+            f"{curso_view.nivel} {curso_view.letra or ''} ({curso_view.anio})",
+            ParagraphStyle('st', parent=styles['Heading3'], alignment=1, fontSize=11, spaceAfter=6)
+        ))
+
+    # I. Estudiante (curso mostrado desde MA si hay)
+    curso_display = (
+        f"{curso_view.nivel} {curso_view.letra or ''} - {curso_view.anio}".strip()
+        if curso_view else "Sin curso"
+    )
+    estado_view = getattr(ma, 'estado', None) or estudiante.estado or 'Activo'
+
+    elements.append(Paragraph("I. Datos del Estudiante", section_style))
+    estudiante_pairs = [
+        ('RUT', estudiante.rut),
+        ('Curso', curso_display),                          # ← curso correcto desde MA/curso_view
+        ('Nombre Completo', estudiante.nombre_completo),
+        ('Fecha de Nacimiento', estudiante.fecha_nacimiento.strftime('%d-%m-%Y') if estudiante.fecha_nacimiento else 'N/A'),
+        ('Sexo', estudiante.sexo),
+        ('Nacionalidad', estudiante.nacionalidad),
+        ('Domicilio', estudiante.domicilio),
+        ('Comuna', estudiante.comuna),
+        ('Ascendencia Indígena', 'Sí' if estudiante.ascendencia_indigena else 'No'),
+        ('Etnia', estudiante.etnia if estudiante.ascendencia_indigena and estudiante.etnia else 'N/A'),
+        ('¿Ha Repetido Curso?', 'Sí' if estudiante.ha_repetido_curso else 'No'),
+        ('Pertenece al PIE', 'Sí' if estudiante.pertenece_al_pie else 'No'),
+        ('Estado', estado_view),                           # ← usa estado de MA si está
+        ('Establecimiento de procedencia', estudiante.de_donde_viene),
+    ]
+    elements.append(KeepTogether(make_info_table(estudiante_pairs)))
+    elements.append(Spacer(1, 10))
+
+    # II. Padres
+    elements.append(section_title("II. Información de los Padres"))
+    padres_pairs = [
+        ('Nombre de la Madre', estudiante.nombre_madre or 'N/A'),
+        ('RUT de la Madre', estudiante.rut_madre or 'N/A'),
+        ('Teléfono de la Madre', estudiante.telefono_madre or 'N/A'),
+        ('Email de la Madre', estudiante.email_madre or 'N/A'),
+        ('Nivel Educacional Madre', estudiante.nivel_educacional_madre or 'N/A'),
+        ('Ocupación de la Madre', estudiante.ocupacion_madre or 'N/A'),
+        ('Nombre del Padre', estudiante.nombre_padre or 'N/A'),
+        ('RUT del Padre', estudiante.rut_padre or 'N/A'),
+        ('Teléfono del Padre', estudiante.telefono_padre or 'N/A'),
+        ('Email del Padre', estudiante.email_padre or 'N/A'),
+        ('Nivel Educacional Padre', estudiante.nivel_educacional_padre or 'N/A'),
+        ('Ocupación del Padre', estudiante.ocupacion_padre or 'N/A'),
+    ]
+    elements.append(KeepTogether(make_info_table(padres_pairs)))
+    elements.append(Spacer(1, 10))
+
+    # III. Apoderado Titular
+    elements.append(section_title("III. Apoderado (Titular)"))
+    apoderado_pairs = [
+        ('Nombre del Apoderado', estudiante.nombre_apoderado or 'N/A'),
+        ('RUT del Apoderado', estudiante.rut_apoderado or 'N/A'),
+        ('Teléfono del Apoderado', estudiante.telefono_apoderado or 'N/A'),
+        ('Email del Apoderado', estudiante.email_apoderado or 'N/A'),
+        ('Nivel Educacional Apoderado', estudiante.nivel_educacional_apoderado or 'N/A'),
+        ('Ocupación del Apoderado', estudiante.ocupacion_apoderado or 'N/A'),
+        ('Fecha nacimiento apoderado', estudiante.fecha_nacimiento_apoderado.strftime('%d-%m-%Y') if getattr(estudiante, 'fecha_nacimiento_apoderado', None) else 'N/A'),
+    ]
+    elements.append(KeepTogether(make_info_table(apoderado_pairs)))
+    elements.append(Spacer(1, 40))
+
+    # IV. Apoderado Suplente
+    elements.append(section_title("IV. Apoderado Suplente"))
+    apoderado_suplente_pairs = [
+        ('Nombre del Apoderado Suplente', estudiante.nombre_apoderado_suplente or 'N/A'),
+        ('RUT del Apoderado Suplente', estudiante.rut_apoderado_suplente or 'N/A'),
+        ('Parentesco con el estudiante', estudiante.parentesco_apoderado_suplente or 'N/A'),
+        ('Teléfono del Apoderado Suplente', estudiante.telefono_apoderado_suplente or 'N/A'),
+        ('Email del Apoderado Suplente', estudiante.email_apoderado_suplente or 'N/A'),
+        ('Nivel Educacional Apoderado Suplente', estudiante.nivel_educacional_apoderado_suplente or 'N/A'),
+        ('Ocupación del Apoderado Suplente', estudiante.ocupacion_apoderado_suplente or 'N/A'),
+    ]
+    elements.append(KeepTogether(make_info_table(apoderado_suplente_pairs)))
+    elements.append(Spacer(1, 10))
+
+    # V. Salud
+    elements.append(section_title("V. Salud y Antecedentes"))
+    salud_pairs = [
+        ('Vive con', estudiante.vive_con or 'N/A'),
+        ('Resolución Judicial', 'Sí' if estudiante.resolucion_judicial else 'No'),
+        ('Problemas de Salud', 'Sí' if estudiante.problemas_salud else 'No'),
+        ('Descripción', estudiante.descripcion_problemas_salud if estudiante.problemas_salud else 'N/A'),
+        ('Impide Educación Física', 'Sí' if estudiante.impide_educacion_fisica else 'No'),
+        ('Certificado médico', 'Sí' if getattr(estudiante, 'certificado_medico', False) else 'No'),
+        ('Sistema de salud', estudiante.sistema_salud or 'N/A'),
+        ('Seguro complementario', estudiante.seguro_salud_complementario or 'N/A'),
+    ]
+    elements.append(KeepTogether(make_info_table(salud_pairs)))
+    elements.append(Spacer(1, 10))
+
+    # VI. Transporte/Consentimientos + Quién matricula
+    elements.append(section_title("VI. Transporte, Consentimientos y Matrícula"))
+    transporte_pairs = [
+        ('Tipo de Transporte', estudiante.tipo_transporte or 'N/A'),
+        ('Opta por clases de religión', 'Sí' if estudiante.opta_religion else 'No'),
+        ('Acepta Fotografías y Videos', 'Sí' if estudiante.acepta_fotografias else 'No'),
+        ('Fecha de Matrícula', estudiante.fecha_matricula.strftime('%d-%m-%Y') if estudiante.fecha_matricula else 'N/A'),
+        ('Matriculado por', estudiante.matriculado_por),
+    ]
+    elements.append(KeepTogether(make_info_table(transporte_pairs)))
+    elements.append(Spacer(1, 10))
+
+    # VII. Firmas
+    firma_path = None
+    firma_config = ConfiguracionFirma.objects.filter(activa=True).order_by('-id').first()
+    if firma_config and getattr(firma_config, 'imagen_firma', None):
+        try:
+            firma_path = firma_config.imagen_firma.path
+        except Exception:
+            firma_path = os.path.join(settings.MEDIA_ROOT, firma_config.imagen_firma.name)
+    if not firma_path or not os.path.exists(firma_path):
+        firma_path = './app/static/app/img/firma_director.jpeg'
+
+    firma_director_img = Image(firma_path, width=100, height=50) if os.path.exists(firma_path) else None
+    p_normal = ParagraphStyle('p_normal', parent=styles['Normal'], fontSize=9)
+
+    LEFT_COL, RIGHT_COL = 200, 310
+    LABEL_W, LINE_W = 150, RIGHT_COL - 150
+    ROW_H = 14
+
+    def _sign_row(label_text):
+        hr = HRFlowable(width='100%', thickness=1, spaceBefore=0, spaceAfter=0, color=colors.black)
+        t = Table([[Paragraph(label_text, p_normal), hr]],
+                  colWidths=[LABEL_W, LINE_W], rowHeights=[ROW_H], hAlign='LEFT')
+        t.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 0),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+            ('TOPPADDING', (0, 0), (-1, -1), 0),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+        ]))
+        return t
+
+    right_block = Table(
+        [[_sign_row("Firma Apoderado Titular:")],
+         [Spacer(1, 10)],
+         [_sign_row("Firma Apoderado Suplente:")]],
+        colWidths=[RIGHT_COL], rowHeights=[ROW_H, 10, ROW_H], hAlign='LEFT'
+    )
+    right_block.setStyle(TableStyle([
+        ('LEFTPADDING', (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+        ('TOPPADDING', (0, 0), (-1, -1), 0),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+    ]))
+
+    left_label = Paragraph("Firma Director:", p_normal)
+    if firma_director_img:
+        left_cell = Table([[left_label, firma_director_img]], colWidths=[80, 120], rowHeights=[ROW_H])
+        left_cell.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 0),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+            ('TOPPADDING', (0, 0), (-1, -1), 0),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+        ]))
+    else:
+        left_cell = _sign_row("Firma Director:")
+
+    firmas_tbl = Table([[left_cell, right_block]], colWidths=[LEFT_COL, RIGHT_COL], hAlign='LEFT')
+    firmas_tbl.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+    ]))
+
+    elements.append(Spacer(1, 24))
+    elements.append(firmas_tbl)
+
+    # Build & return
+    doc.build(elements)
+    buffer.seek(0)
+    return FileResponse(buffer, as_attachment=True, filename=f'ficha_estudiante_{estudiante.rut}.pdf')
+
+
+
+
+
+def imprimir_estudiantes_por_curso(request, curso_id):
+    # Curso destino (año correcto)
+    curso = get_object_or_404(Curso, pk=curso_id)
+
+    # Título dinámico sin hardcode
+    cfg = ConfiguracionMatricula.objects.filter(activa=True).first()
+    titulo_matricula = cfg.titulo_resuelto() if cfg else f"FICHA DE INSCRIPCIÓN DE MATRÍCULA {curso.anio}"
+
+    # Trae la matrícula anual DEL CURSO/AÑO SELECCIONADO
+    ma_list = (
+        MatriculaAnual.objects
+        .filter(curso=curso)
+        .filter(Q(estado="Activo") | Q(estado__isnull=True))
+        .select_related('estudiante', 'curso')
+        .order_by('estudiante__nombre_completo')
+    )
+
+    # Buffer PDF
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
+    elements = []
+    styles = getSampleStyleSheet()
+
+    # Estilos
+    label_style = ParagraphStyle('label', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=9, leading=11)
+    value_style = ParagraphStyle('value', parent=styles['Normal'], fontName='Helvetica', fontSize=9, leading=11)
+    section_style = ParagraphStyle('section', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=10,
+                                   textColor=colors.HexColor('#374151'), spaceBefore=6, spaceAfter=4)
+
+    def make_info_table(pairs, col_widths=(170, 340)):
+        data = [
+            [Paragraph(str(k), label_style),
+             Paragraph('N/A' if v in [None, ''] else str(v), value_style)]
+            for k, v in pairs
+        ]
+        t = Table(data, colWidths=list(col_widths), hAlign='LEFT', spaceAfter=8)
+        t.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 6),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+            ('TOPPADDING', (0, 0), (-1, -1), 3),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+            ('LINEBELOW', (0, 0), (-1, -2), 0.25, colors.HexColor('#e5e7eb')),
+        ]))
+        return t
+
+    def section_title(texto):
+        title = Table([[Paragraph(texto, section_style)]], colWidths=[510])
+        title.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f3f4f6')),
+            ('LEFTPADDING', (0, 0), (-1, -1), 6),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ('BOX', (0, 0), (-1, -1), 0.25, colors.HexColor('#e5e7eb')),
+        ]))
+        return title
+
+    def agregar_encabezado():
+        logo_path = './app/static/app/img/logo.png'
+        header_text = Paragraph(
+            "LICEO MUNICIPAL DE SAN PEDRO<br/>"
+            "R.B.D 10854-5. Carretera de la Fruta km 9.5, San Pedro de Melipilla.<br/>"
+            "Provincia de Melipilla, Región Metropolitana.",
+            ParagraphStyle('hdr', parent=styles['Normal'], alignment=1, fontSize=8, leading=10)
+        )
+        row = []
+        if os.path.exists(logo_path):
+            row = [Image(logo_path, width=40, height=40), header_text]
+            header_tbl = Table([row], colWidths=[50, 460])
+        else:
+            header_tbl = Table([[header_text]], colWidths=[510])
+        header_tbl.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 0),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ]))
+        elements.append(header_tbl)
+
+        title = Paragraph(
+            f"{titulo_matricula} - {curso.nivel} {curso.letra or ''} ({curso.anio})",
+            ParagraphStyle('t', parent=styles['Heading1'], alignment=1, fontSize=13, spaceAfter=6)
+        )
+        elements.append(title)
+
+    # Generación por alumno (desde MA para asegurar año/curso correctos)
+    total = ma_list.count()
+    for idx, ma in enumerate(ma_list, start=1):
+        estudiante = ma.estudiante
+        agregar_encabezado()
+
+        elements.append(section_title("I. Datos del Estudiante"))
+        estudiante_pairs = [
+            ('RUT', estudiante.rut),
+            ('Curso', f"{ma.curso.nivel} {ma.curso.letra or ''} - {ma.curso.anio}"),  # ← curso correcto desde MA
+            ('Nombre Completo', estudiante.nombre_completo),
+            ('Fecha de Nacimiento', estudiante.fecha_nacimiento.strftime('%d-%m-%Y') if estudiante.fecha_nacimiento else 'N/A'),
+            ('Sexo', estudiante.sexo),
+            ('Nacionalidad', estudiante.nacionalidad),
+            ('Domicilio', estudiante.domicilio),
+            ('Comuna', estudiante.comuna),
+            ('Ascendencia Indígena', 'Sí' if estudiante.ascendencia_indigena else 'No'),
+            ('¿Ha Repetido Curso?', 'Sí' if estudiante.ha_repetido_curso else 'No'),
+            ('Pertenece al PIE', 'Sí' if estudiante.pertenece_al_pie else 'No'),
+            ('Estado', ma.estado or estudiante.estado or 'Activo'),  # usa MA si viene
+            ('Establecimiento de procedencia', estudiante.de_donde_viene),
+        ]
+        elements.append(KeepTogether(make_info_table(estudiante_pairs)))
+        elements.append(Spacer(1, 10))
+
+        # II. Información de los Padres
+        elements.append(section_title("II. Información de los Padres"))
+        padres_pairs = [
+            ('Nombre de la Madre', estudiante.nombre_madre or 'N/A'),
+            ('RUT de la Madre', estudiante.rut_madre or 'N/A'),
+            ('Teléfono de la Madre', estudiante.telefono_madre or 'N/A'),
+            ('Email de la Madre', estudiante.email_madre or 'N/A'),
+            ('Nivel Educacional Madre', estudiante.nivel_educacional_madre or 'N/A'),
+            ('Ocupación de la Madre', estudiante.ocupacion_madre or 'N/A'),
+            ('Nombre del Padre', estudiante.nombre_padre or 'N/A'),
+            ('RUT del Padre', estudiante.rut_padre or 'N/A'),
+            ('Teléfono del Padre', estudiante.telefono_padre or 'N/A'),
+            ('Email del Padre', estudiante.email_padre or 'N/A'),
+            ('Nivel Educacional Padre', estudiante.nivel_educacional_padre or 'N/A'),
+            ('Ocupación del Padre', estudiante.ocupacion_padre or 'N/A'),
+        ]
+        elements.append(KeepTogether(make_info_table(padres_pairs)))
+        elements.append(Spacer(1, 10))
+
+        # III. Apoderado (Titular)
+        elements.append(section_title("III. Apoderado (Titular)"))
+        apoderado_pairs = [
+            ('Nombre del Apoderado', estudiante.nombre_apoderado or 'N/A'),
+            ('RUT del Apoderado', estudiante.rut_apoderado or 'N/A'),
+            ('Teléfono del Apoderado', estudiante.telefono_apoderado or 'N/A'),
+            ('Email del Apoderado', estudiante.email_apoderado or 'N/A'),
+            ('Nivel Educacional Apoderado', estudiante.nivel_educacional_apoderado or 'N/A'),
+            ('Ocupación del Apoderado', estudiante.ocupacion_apoderado or 'N/A'),
+            ('Fecha de Nacimiento apoderado', _fmt_date(getattr(estudiante, 'fecha_nacimiento_apoderado', None))),
+        ]
+        elements.append(KeepTogether(make_info_table(apoderado_pairs)))
+        elements.append(Spacer(1, 40))
+
+        # IV. Apoderado Suplente
+        elements.append(section_title("IV. Apoderado Suplente"))
+        suplente_pairs = [
+            ('Nombre del Apoderado Suplente', estudiante.nombre_apoderado_suplente or 'N/A'),
+            ('RUT del Apoderado Suplente', estudiante.rut_apoderado_suplente or 'N/A'),
+            ('Teléfono del Apoderado Suplente', estudiante.telefono_apoderado_suplente or 'N/A'),
+            ('Email del Apoderado Suplente', estudiante.email_apoderado_suplente or 'N/A'),
+            ('Nivel Educacional Apoderado Suplente', estudiante.nivel_educacional_apoderado_suplente or 'N/A'),
+            ('Ocupación del Apoderado Suplente', estudiante.ocupacion_apoderado_suplente or 'N/A'),
+            ('Parentesco con el Estudiante', estudiante.parentesco_apoderado_suplente or 'N/A'),
+        ]
+        elements.append(KeepTogether(make_info_table(suplente_pairs)))
+        elements.append(Spacer(1, 10))
+
+        # V. Salud y Antecedentes
+        elements.append(section_title("V. Salud y Antecedentes"))
+        salud_pairs = [
+            ('Vive con', estudiante.vive_con),
+            ('Resolución Judicial', 'Sí' if estudiante.resolucion_judicial else 'No'),
+            ('Problemas de Salud', 'Sí' if estudiante.problemas_salud else 'No'),
+            ('Descripción', estudiante.descripcion_problemas_salud if estudiante.problemas_salud else 'N/A'),
+            ('Impide Educación Física', 'Sí' if estudiante.impide_educacion_fisica else 'No'),
+            ('Certificado médico', 'Sí' if estudiante.certificado_medico else 'No'),
+            ('Sistema de salud', estudiante.sistema_salud),
+            ('Seguro de Salud Complementario', estudiante.seguro_salud_complementario or 'N/A'),
+        ]
+        elements.append(KeepTogether(make_info_table(salud_pairs)))
+        elements.append(Spacer(1, 10))
+
+        # VI. Transporte y Consentimientos
+        elements.append(section_title("VI. Transporte y Consentimientos"))
+        transporte_pairs = [
+            ('Tipo de Transporte', estudiante.tipo_transporte or 'N/A'),
+            ('Opta por clases de religión', 'Sí' if estudiante.opta_religion else 'No'),
+            ('Acepta Fotografías y Videos', 'Sí' if estudiante.acepta_fotografias else 'No'),
+            ('Fecha de Matrícula', estudiante.fecha_matricula.strftime('%d-%m-%Y') if estudiante.fecha_matricula else 'N/A'),
+        ]
+        elements.append(KeepTogether(make_info_table(transporte_pairs)))
+        elements.append(Spacer(1, 10))
+
+        # VII. Firmas (alineación de línea con el texto + más espacio entre filas)
+        firma_path = None
+        firma_config = ConfiguracionFirma.objects.filter(activa=True).order_by('-id').first()
+        if firma_config and getattr(firma_config, 'imagen_firma', None):
+            try:
+                firma_path = firma_config.imagen_firma.path
+            except Exception:
+                firma_path = os.path.join(settings.MEDIA_ROOT, firma_config.imagen_firma.name)
+        if not firma_path or not os.path.exists(firma_path):
+            firma_path = './app/static/app/img/firma_director.jpeg'
+
+        firma_director_img = Image(firma_path, width=100, height=50) if os.path.exists(firma_path) else None
+        p_normal = ParagraphStyle('p_normal', parent=styles['Normal'], fontSize=9)
+
+        # --- Config de anchos/márgenes ---
+        LEFT_COL  = 200     # bloque "Firma Director"
+        RIGHT_COL = 310     # bloque con 2 firmas
+        LABEL_W   = 150     # ancho etiqueta "Firma Apoderado ..."
+        LINE_W    = RIGHT_COL - LABEL_W  # ancho de línea
+        ROW_H     = 14      # alto fijo de la fila para alinear baseline
+
+        p_normal = ParagraphStyle('p_normal', parent=styles['Normal'], fontSize=9)
+
+        def _sign_row(label_text):
+            """Mini tabla 1x2 con alto de fila fijo para línea de firma."""
+            hr = HRFlowable(width='100%', thickness=1, spaceBefore=0, spaceAfter=0, color=colors.black)
+            t = Table(
+                [[Paragraph(label_text, p_normal), hr]],
+                colWidths=[LABEL_W, LINE_W],
+                rowHeights=[ROW_H],
+                hAlign='LEFT'
+            )
+            t.setStyle(TableStyle([
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('LEFTPADDING',  (0, 0), (-1, -1), 0),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+                ('TOPPADDING',   (0, 0), (-1, -1), 0),
+                ('BOTTOMPADDING',(0, 0), (-1, -1), 0),
+            ]))
+            return t
+
+        # bloque derecho: dos filas iguales con un espacio entre ellas
+        right_block = Table(
+            [
+                [_sign_row("Firma Apoderado Titular:")],
+                [Spacer(1, 10)],  # separador vertical
+                [_sign_row("Firma Apoderado Suplente:")],
+            ],
+            colWidths=[RIGHT_COL],
+            rowHeights=[ROW_H, 10, ROW_H],
+            hAlign='LEFT'
+        )
+        right_block.setStyle(TableStyle([
+            ('LEFTPADDING',  (0, 0), (-1, -1), 0),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+            ('TOPPADDING',   (0, 0), (-1, -1), 0),
+            ('BOTTOMPADDING',(0, 0), (-1, -1), 0),
+        ]))
+
+        # bloque izquierdo (director)
+        left_label = Paragraph("Firma Director:", p_normal)
+        if firma_director_img:
+            left_cell = Table([[left_label, firma_director_img]], colWidths=[80, 120], rowHeights=[ROW_H])
+            left_cell.setStyle(TableStyle([
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('LEFTPADDING',  (0, 0), (-1, -1), 0),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+                ('TOPPADDING',   (0, 0), (-1, -1), 0),
+                ('BOTTOMPADDING',(0, 0), (-1, -1), 0),
+            ]))
+        else:
+            # si no hay imagen, también usamos HR para el director
+            left_cell = _sign_row("Firma Director:")
+
+        firmas_tbl = Table([[left_cell, right_block]],
+                        colWidths=[LEFT_COL, RIGHT_COL],
+                        hAlign='LEFT')
+        firmas_tbl.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('LEFTPADDING',  (0, 0), (-1, -1), 0),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+        ]))
+
+        elements.append(Spacer(1, 24))
+        elements.append(firmas_tbl)
+        # Salto de página entre estudiantes
+        if idx < total:
+            elements.append(PageBreak())
+
+    # Construcción del PDF
+    doc.build(elements)
+    buffer.seek(0)
+    nombre_pdf = f"listado_estudiantes_{curso.nivel}_{curso.letra or ''}_{curso.anio}.pdf".replace(' ', '_')
+    return FileResponse(buffer, as_attachment=True, filename=nombre_pdf)

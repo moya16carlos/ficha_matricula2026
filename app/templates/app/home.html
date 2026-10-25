@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Inicio · Matrículas LSP{% endblock %}
+
+{% block content %}
+<main class="max-w-7xl mx-auto px-6 py-8">
+
+  <!-- Saludo -->
+  <div class="flex flex-wrap items-end justify-between gap-3 mb-7">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900">¡Hola, {% firstof user.nombre user.get_username user %}!</h1>
+      <p class="text-sm text-slate-500 mt-0.5">Año en curso: <b class="text-slate-700">{{ anio_actual }}</b></p>
+    </div>
+    {% if user.rol %}
+      <span class="rounded-full bg-indigo-50 ring-1 ring-indigo-200 px-3 py-1 text-xs font-semibold text-indigo-700">Tu rol: {{ user.rol|title }}</span>
+    {% endif %}
+  </div>
+
+  <!-- Métricas reales -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-7">
+    <a href="{% url 'listar_estudiantes' %}" class="group rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm p-5 hover:shadow-md hover:ring-slate-300 transition">
+      <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Estudiantes</p>
+      <p class="mt-2 text-3xl font-bold text-slate-900">{{ n_estudiantes }}</p>
+      <p class="mt-1 text-xs text-slate-500 group-hover:text-indigo-600 group-hover:font-medium">ver listado →</p>
+    </a>
+    <a href="{% url 'listar_estudiantes_anio' %}?anio={{ anio_actual }}" class="group rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm p-5 hover:shadow-md hover:ring-slate-300 transition">
+      <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Matrículas {{ anio_actual }}</p>
+      <p class="mt-2 text-3xl font-bold text-slate-900">{{ n_matriculas_anio }}</p>
+      <p class="mt-1 text-xs text-slate-500">en {{ n_cursos_anio }} cursos</p>
+      <p class="text-xs text-indigo-600 group-hover:underline">ver año {{ anio_actual }} →</p>
+    </a>
+    <a href="{% url 'listar_estudiantes_anio' %}?anio={{ anio_actual }}&provisionales=1" class="group rounded-2xl bg-amber-50/70 ring-1 ring-amber-200 shadow-sm p-5 hover:shadow-md hover:ring-amber-300 transition">
+      <div class="flex items-start justify-between gap-2">
+        <p class="text-xs font-semibold uppercase tracking-wide text-amber-600">⚠ RUT provisionales</p>
+        <span class="text-[10px] font-bold bg-amber-400 text-slate-900 rounded-full px-2 py-0.5">ACCIÓN</span>
+      </div>
+      <p class="mt-2 text-3xl font-bold text-amber-700">{{ n_provisionales }}</p>
+      <p class="text-xs text-amber-700/80 group-hover:underline">abrir cola de cambio →</p>
+    </a>
+    <div class="rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm p-5">
+      <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Mi equipo</p>
+      <p class="mt-2 text-sm font-semibold text-slate-800 leading-snug">{{ n_usuarios }} usuarios</p>
+      <p class="mt-1 text-xs text-slate-400">
+        {% for r in roles_resumen %}{{ r.n }} {{ r.rol|lower }}{% if not forloop.last %} · {% endif %}{% endfor %}
+      </p>
+    </div>
+  </div>
+
+  <!-- Acciones rápidas -->
+  <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-7">
+    <a href="{% url 'nuevo_estudiante' %}" class="rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm p-5 flex flex-col gap-2 hover:shadow-md hover:-translate-y-0.5 transition">
+      <div class="h-10 w-10 rounded-xl bg-indigo-50 ring-1 ring-indigo-200 flex items-center justify-center text-indigo-600 text-lg">
+        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-width="2" d="M12 5v14M5 12h14"/></svg>
+      </div>
+      <h3 class="font-semibold text-slate-800">Agregar estudiante</h3>
+      <p class="text-xs text-slate-500">Crea una ficha nueva con curso y apoderados.</p>
+      <span class="mt-auto text-xs font-semibold text-indigo-600">Abrir formulario →</span>
+    </a>
+    <a href="{% url 'listar_estudiantes_anio' %}?anio={{ anio_actual }}" class="rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm p-5 flex flex-col gap-2 hover:shadow-md hover:-translate-y-0.5 transition">
+      <div class="h-10 w-10 rounded-xl bg-emerald-50 ring-1 ring-emerald-200 flex items-center justify-center text-emerald-600">
+        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </div>
+      <h3 class="font-semibold text-slate-800">Matrículas del año</h3>
+      <p class="text-xs text-slate-500">Listado interactivo: cambia curso e imprime desde la fila.</p>
+      <span class="mt-auto text-xs font-semibold text-indigo-600">Abrir listado →</span>
+    </a>
+    <a href="{% url 'ficha_estudiante' %}" class="rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm p-5 flex flex-col gap-2 hover:shadow-md hover:-translate-y-0.5 transition">
+      <div class="h-10 w-10 rounded-xl bg-slate-100 ring-1 ring-slate-200 flex items-center justify-center text-slate-600">
+        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-width="2" d="M21 21l-4.35-4.35M10 18a8 8 0 100-16 8 8 0 000 16z"/></svg>
+      </div>
+      <h3 class="font-semibold text-slate-800">Ficha por RUT</h3>
+      <p class="text-xs text-slate-500">Busca y edita la ficha; el PDF queda a un clic.</p>
+      <span class="mt-auto text-xs font-semibold text-indigo-600">Buscar →</span>
+    </a>
+    {% if user.rol == 'ADMINISTRADOR' %}
+    <a href="{% url 'panel_config_documentos' %}" class="rounded-2xl bg-slate-900 text-white ring-1 ring-slate-900 shadow-sm p-5 flex flex-col gap-2 hover:shadow-md hover:-translate-y-0.5 transition">
+      <div class="h-10 w-10 rounded-xl bg-white/10 ring-1 ring-white/20 flex items-center justify-center text-lg">⚙️</div>
+      <h3 class="font-semibold">Panel de control</h3>
+      <p class="text-xs text-slate-300">Fondos, firmas, cursos y configuración del año.</p>
+      <span class="mt-auto text-xs font-semibold text-indigo-300">Abrir panel →</span>
+    </a>
+    {% else %}
+    <div class="rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm p-5 flex flex-col gap-2">
+      <div class="h-10 w-10 rounded-xl bg-emerald-50 ring-1 ring-emerald-200 flex items-center justify-center text-emerald-600 text-lg">📄</div>
+      <h3 class="font-semibold text-slate-800">¿Dudas?</h3>
+      <p class="text-xs text-slate-500">Usa el buscador de arriba: nombre o RUT te lleva directo a la ficha.</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Cola de trabajo + guía -->
+  <div class="grid lg:grid-cols-3 gap-4">
+    <div class="lg:col-span-2 rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm p-6">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div>
+          <h2 class="font-bold text-slate-800">Cola de RUT provisionales
+            <span class="align-middle ml-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-bold text-amber-700 ring-1 ring-amber-200">{{ n_provisionales }} pendientes</span>
+          </h2>
+          <p class="text-xs text-slate-500 mt-0.5">Estudiantes extranjeros con RUT provisional del Registro Civil, ordenados por nombre.</p>
+        </div>
+        <a href="{% url 'listar_estudiantes_anio' %}?anio={{ anio_actual }}&provisionales=1"
+           class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">Continuar la cola →</a>
+      </div>
+      {% if cola_prov %}
+      <div class="space-y-2">
+        {% for e in cola_prov %}
+        <a href="{% url 'detalles_estudiante' e.id %}" class="flex items-center justify-between rounded-xl ring-1 ring-slate-200 px-4 py-3 hover:bg-indigo-50/50 hover:ring-indigo-200 transition">
+          <div>
+            <p class="text-sm font-semibold text-slate-800">{{ e.nombre_completo }}</p>
+            <p class="text-xs text-slate-500 font-mono">{{ e.rut }}{% if e.curso %} · {{ e.curso.nivel }}{% if e.curso.letra %} {{ e.curso.letra }}{% endif %}{% endif %}</p>
+          </div>
+          <span class="text-xs text-indigo-600 font-medium">Cambiar RUT →</span>
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="rounded-xl bg-emerald-50 ring-1 ring-emerald-200 px-4 py-6 text-sm text-emerald-800">
+        ✔ No hay estudiantes con RUT provisional — la cola está vacía.
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm p-6">
+      <h2 class="font-bold text-slate-800 mb-1">¿Cómo funciona?</h2>
+      <p class="text-xs text-slate-500 mb-4">Guía rápida para quien usa el sistema por primera vez.</p>
+      <ol class="space-y-3 text-sm text-slate-600">
+        <li class="flex gap-3"><span class="h-6 w-6 shrink-0 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center justify-center">1</span><span><b>Encuentra</b> al estudiante con el buscador de arriba (nombre o RUT).</span></li>
+        <li class="flex gap-3"><span class="h-6 w-6 shrink-0 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center justify-center">2</span><span><b>Actúa</b>: edita la ficha, cambia curso en el listado o imprime el PDF.</span></li>
+        <li class="flex gap-3"><span class="h-6 w-6 shrink-0 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center justify-center">3</span><span><b>Sigue</b>: los RUT provisionales quedan en la cola hasta quedar definitivos.</span></li>
+      </ol>
+    </div>
+  </div>
+
+  <p class="mt-6 text-xs text-slate-400">El buscador de arriba funciona en cualquier página.</p>
+</main>
+{% endblock %}

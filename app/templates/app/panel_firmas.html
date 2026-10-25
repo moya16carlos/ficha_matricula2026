@@ -1,0 +1,111 @@
+<!-- templates/app/panel_firmas.html -->
+{% load static %}
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Panel de Firmas</title>
+  <!-- Si usas Tailwind por CDN en desarrollo (o tu build habitual) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <div class="max-w-5xl mx-auto px-4 py-8">
+    <h1 class="text-2xl font-semibold text-gray-800 mb-6">Panel de firmas</h1>
+
+    <!-- Mensajes -->
+    {% if messages %}
+      <div class="space-y-2 mb-6">
+        {% for message in messages %}
+          <div class="rounded-lg px-4 py-3 text-sm
+            {% if message.tags == 'success' %}bg-green-50 text-green-800 border border-green-200{% elif message.tags == 'error' %}bg-red-50 text-red-800 border border-red-200{% else %}bg-gray-100 text-gray-800 border border-gray-200{% endif %}">
+            {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Card: Subir nueva firma -->
+      <div class="lg:col-span-1">
+        <div class="bg-white rounded-2xl shadow p-6">
+          <h2 class="text-lg font-medium text-gray-900 mb-4">Subir / crear firma</h2>
+          <form method="post" enctype="multipart/form-data" class="space-y-4">
+            {% csrf_token %}
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Nombre del Director</label>
+              {{ form.nombre_director }}
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Imagen de firma</label>
+              <input type="file" name="imagen_firma" accept="image/*"
+                     class="w-full block text-sm text-gray-900 file:mr-4 file:py-2 file:px-4
+                            file:rounded-lg file:border-0 file:text-sm file:font-semibold
+                            file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200
+                            rounded-lg border border-gray-300">
+            </div>
+            <div class="flex items-center space-x-2">
+              {{ form.activa }}
+              <label class="text-sm text-gray-700">Marcar como activa</label>
+            </div>
+            <button type="submit"
+                    class="w-full inline-flex justify-center items-center rounded-xl px-4 py-2
+                           text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700
+                           focus:outline-none focus:ring-2 focus:ring-blue-400 shadow">
+              Guardar firma
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Card: Listado -->
+      <div class="lg:col-span-2">
+        <div class="bg-white rounded-2xl shadow p-6">
+          <h2 class="text-lg font-medium text-gray-900 mb-4">Firmas existentes</h2>
+
+          {% if firmas %}
+            <ul class="grid md:grid-cols-2 gap-4">
+              {% for f in firmas %}
+                <li class="border border-gray-200 rounded-xl p-4 flex gap-4 items-center">
+                  <div class="w-28 h-16 flex items-center justify-center bg-gray-50 border border-gray-200 rounded-lg overflow-hidden">
+                    {% if f.imagen_firma %}
+                      <img src="{{ f.imagen_firma.url }}" alt="Firma" class="max-h-16 object-contain">
+                    {% else %}
+                      <span class="text-xs text-gray-500">Sin imagen</span>
+                    {% endif %}
+                  </div>
+                  <div class="flex-1">
+                    <div class="font-medium text-gray-900">{{ f.nombre_director }}</div>
+                    <div class="text-sm">
+                      {% if f.activa %}
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 mt-1">Activa</span>
+                      {% else %}
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 mt-1">Inactiva</span>
+                      {% endif %}
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    {% if not f.activa %}
+                      <form method="post" class="inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="activar_id" value="{{ f.id }}">
+                        <button class="px-3 py-1.5 text-sm rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">Activar</button>
+                      </form>
+                    {% endif %}
+                    <form method="post" class="inline" onsubmit="return confirm('¿Eliminar esta firma?');">
+                      {% csrf_token %}
+                      <input type="hidden" name="eliminar_id" value="{{ f.id }}">
+                      <button class="px-3 py-1.5 text-sm rounded-lg bg-red-600 text-white hover:bg-red-700">Eliminar</button>
+                    </form>
+                  </div>
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <p class="text-sm text-gray-600">Aún no hay firmas registradas.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

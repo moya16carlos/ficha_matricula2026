@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockup 03 · Listado por año v3</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>html,body{font-family:'Inter',ui-sans-serif,system-ui,sans-serif}</style>
+</head>
+
+<body class="bg-slate-100 text-slate-800 min-h-screen">
+
+<!-- NAVBAR CLARO (el que veré en todas las páginas) -->
+<header class="sticky top-0 z-40 bg-white border-b border-slate-200">
+  <div class="max-w-7xl mx-auto px-6 h-16 flex items-center gap-5">
+    <div class="flex items-center gap-3 shrink-0">
+      <div class="h-9 w-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white text-lg">🎓</div>
+      <div class="leading-none"><p class="font-bold text-slate-900 text-[15px]">Liceo San Pedro</p><p class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Intranet matrículas</p></div>
+    </div>
+    <div class="flex-1 max-w-md relative">
+      <div class="flex items-center gap-2 rounded-xl bg-slate-100 px-3 py-2 ring-1 ring-transparent hover:ring-slate-300 focus-within:bg-white focus-within:ring-2 focus-within:ring-indigo-500 transition">
+        <svg class="h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-width="2" d="m21 21-4.3-4.3M11 19a8 8 0 1 1 0-16 8 8 0 0 1 0 16Z"/></svg>
+        <input placeholder="Busca por nombre o RUT…" class="bg-transparent outline-none text-sm w-full placeholder:text-slate-400">
+      </div>
+    </div>
+    <nav class="flex items-center gap-5 text-sm font-medium text-slate-600 shrink-0">
+      <a class="hover:text-slate-900">Inicio</a>
+      <a class="text-indigo-700 underline decoration-indigo-400 decoration-2 underline-offset-8">Matrículas</a>
+      <a class="hover:text-slate-900">Nuevo estudiante</a>
+      <div class="flex items-center gap-2 rounded-full ring-1 ring-slate-200 bg-white py-1 pr-2 pl-1 hover:bg-slate-50 cursor-pointer"><span class="h-7 w-7 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center justify-center">CM</span><span class="text-xs text-slate-600">Carlos ▾</span></div>
+      <a class="rounded-xl px-2.5 py-2 text-slate-500 hover:bg-red-50 hover:text-red-600" title="Cerrar sesión">⏻</a>
+    </nav>
+  </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-6 py-7">
+
+  <!-- Breadcrumb -->
+  <nav class="flex items-center gap-1.5 text-xs text-slate-400 mb-3">
+    <a href="#" class="hover:text-indigo-600">Inicio</a><span>/</span>
+    <a href="#" class="hover:text-indigo-600">Matrículas</a><span>/</span>
+    <span class="text-slate-600 font-medium">Año 2026</span>
+  </nav>
+
+  <!-- Título + chips -->
+  <div class="flex flex-wrap items-end justify-between gap-4 mb-5">
+    <div>
+      <div class="flex items-center gap-3">
+        <h1 class="text-2xl font-bold text-slate-900">Matrículas 2026</h1>
+        <span class="rounded-full bg-indigo-50 ring-1 ring-indigo-200 px-2.5 py-0.5 text-xs font-semibold text-indigo-700">Año activo</span>
+      </div>
+      <p class="text-sm text-slate-500 mt-0.5">Haz clic en el nombre para abrir la ficha · cambia el curso sin salir de la tabla.</p>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <span class="rounded-full bg-white ring-1 ring-slate-200 px-3.5 py-1.5 text-xs font-medium text-slate-700 shadow-sm">Total <b>563</b></span>
+      <a href="#" class="rounded-full bg-amber-100 ring-1 ring-amber-300 px-3.5 py-1.5 text-xs font-semibold text-amber-800 hover:bg-amber-200 transition shadow-sm">⚠ RUT provisionales (92) → cola</a>
+      <span class="rounded-full bg-slate-100 ring-1 ring-slate-200 px-3.5 py-1.5 text-xs font-medium text-slate-600 shadow-sm">Sin nivel <b>1</b></span>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="bg-white ring-1 ring-slate-200 rounded-2xl shadow-sm p-3.5 mb-5 flex flex-wrap items-end gap-3">
+    <div>
+      <label class="block text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1">Año</label>
+      <select class="rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"><option>2026</option><option>2025</option></select>
+    </div>
+    <div>
+      <label class="block text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1">Curso</label>
+      <select class="rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"><option>Todos (563)</option><option>1° Básico A</option><option>1° Básico B</option><option>… 30 cursos</option></select>
+    </div>
+    <div class="flex-1 min-w-[220px]">
+      <label class="block text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1">Buscar en la lista</label>
+      <input placeholder="Nombre o RUT…" class="w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+    </div>
+    <button class="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700">Filtrar</button>
+    <button class="rounded-xl bg-white ring-1 ring-slate-300 px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">Limpiar</button>
+  </div>
+
+  <!-- Tabla -->
+  <div class="bg-white ring-1 ring-slate-200 rounded-2xl shadow-sm overflow-hidden">
+    <table class="min-w-full text-sm">
+      <thead class="bg-slate-50 border-b border-slate-200 text-[11px] uppercase tracking-wide text-slate-500">
+        <tr>
+          <th class="px-4 py-3 text-left font-semibold">Estudiante</th>
+          <th class="px-4 py-3 text-left font-semibold">RUT</th>
+          <th class="px-4 py-3 text-left font-semibold">Curso <span class="normal-case font-normal text-slate-400">(edita aquí)</span></th>
+          <th class="px-4 py-3 text-left font-semibold">Estado</th>
+          <th class="px-4 py-3 text-left font-semibold">Fecha</th>
+          <th class="px-4 py-3 text-right font-semibold">Acciones</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        <tr class="hover:bg-indigo-50/40">
+          <td class="px-4 py-2.5"><a href="#" class="font-medium text-indigo-700 hover:underline">Agustina Pascal Vera Ascencio</a></td>
+          <td class="px-4 py-2.5 font-mono text-slate-600">26493646-2</td>
+          <td class="px-4 py-2.5"><select class="js-curso rounded-lg border border-indigo-200 bg-indigo-50/60 px-2 py-1 text-xs font-medium text-slate-700 hover:border-indigo-400 focus:ring-2 focus:ring-indigo-500"><option selected>2° Básico B (32)</option><option>2° Básico A (30)</option><option>3° Básico A (31)</option></select></td>
+          <td class="px-4 py-2.5"><span class="rounded-full bg-emerald-50 ring-1 ring-emerald-200 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">Activo</span></td>
+          <td class="px-4 py-2.5 text-slate-500 text-xs">04-03-2026</td>
+          <td class="px-4 py-2.5"><div class="flex justify-end gap-1.5"><a href="#" class="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-200">Ficha</a><a href="#" class="rounded-lg bg-white ring-1 ring-indigo-200 px-2.5 py-1 text-xs font-semibold text-indigo-700 hover:bg-indigo-50">PDF</a></div></td>
+        </tr>
+        <tr class="bg-amber-50/60 hover:bg-amber-50">
+          <td class="px-4 py-2.5"><a href="#" class="font-medium text-indigo-700 hover:underline">Angelina Rivera Ojeda</a></td>
+          <td class="px-4 py-2.5 font-mono text-slate-600">100734494-1 <span class="ml-1 rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">RUT prov.</span></td>
+          <td class="px-4 py-2.5"><select class="js-curso rounded-lg border border-indigo-200 bg-indigo-50/60 px-2 py-1 text-xs font-medium text-slate-700"><option selected>1° Medio A (38)</option><option>1° Medio B (39)</option></select></td>
+          <td class="px-4 py-2.5"><span class="rounded-full bg-emerald-50 ring-1 ring-emerald-200 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">Activo</span></td>
+          <td class="px-4 py-2.5 text-slate-500 text-xs">02-03-2026</td>
+          <td class="px-4 py-2.5"><div class="flex justify-end gap-1.5"><a href="#" class="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-200">Ficha</a><a href="#" class="rounded-lg bg-white ring-1 ring-indigo-200 px-2.5 py-1 text-xs font-semibold text-indigo-700 hover:bg-indigo-50">PDF</a></div></td>
+        </tr>
+        <tr class="hover:bg-indigo-50/40">
+          <td class="px-4 py-2.5"><a href="#" class="font-medium text-indigo-700 hover:underline">Antonia García Vidal Mendoza</a></td>
+          <td class="px-4 py-2.5 font-mono text-slate-600">16777777-5</td>
+          <td class="px-4 py-2.5"><select class="js-curso rounded-lg border border-indigo-200 bg-indigo-50/60 px-2 py-1 text-xs font-medium text-slate-700"><option selected>3° Medio B (34)</option><option>3° Medio A (35)</option></select></td>
+          <td class="px-4 py-2.5"><span class="rounded-full bg-emerald-50 ring-1 ring-emerald-200 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">Activo</span></td>
+          <td class="px-4 py-2.5 text-slate-500 text-xs">05-03-2026</td>
+          <td class="px-4 py-2.5"><div class="flex justify-end gap-1.5"><a href="#" class="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-200">Ficha</a><a href="#" class="rounded-lg bg-white ring-1 ring-indigo-200 px-2.5 py-1 text-xs font-semibold text-indigo-700 hover:bg-indigo-50">PDF</a></div></td>
+        </tr>
+        <tr class="hover:bg-indigo-50/40">
+          <td class="px-4 py-2.5"><a href="#" class="font-medium text-indigo-700 hover:underline">Alejandro Antonio Tapia Jerez</a></td>
+          <td class="px-4 py-2.5 font-mono text-slate-600">23828044-3</td>
+          <td class="px-4 py-2.5"><select class="js-curso rounded-lg border border-indigo-200 bg-indigo-50/60 px-2 py-1 text-xs font-medium text-slate-700"><option selected>1° Medio A (38)</option><option>2° Medio B (33)</option></select></td>
+          <td class="px-4 py-2.5"><span class="rounded-full bg-slate-100 ring-1 ring-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-500">Retirado</span></td>
+          <td class="px-4 py-2.5 text-slate-500 text-xs">11-03-2026</td>
+          <td class="px-4 py-2.5"><div class="flex justify-end gap-1.5"><a href="#" class="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-200">Ficha</a><a href="#" class="rounded-lg bg-white ring-1 ring-indigo-200 px-2.5 py-1 text-xs font-semibold text-indigo-700 hover:bg-indigo-50">PDF</a></div></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Pie: cantidad + paginación -->
+    <div class="border-t border-slate-200 px-4 py-3 flex items-center justify-between bg-slate-50/60">
+      <p class="text-xs text-slate-500">Mostrando <b>50</b> de <b>563</b></p>
+      <div class="flex items-center gap-2 text-sm">
+        <span class="rounded-lg bg-white ring-1 ring-slate-200 px-3 py-1.5 text-xs text-slate-700 font-medium hover:bg-slate-50 cursor-pointer">‹ Anterior</span>
+        <span class="text-xs text-slate-500">Página <b>1</b> de <b>12</b></span>
+        <span class="rounded-lg bg-white ring-1 ring-slate-200 px-3 py-1.5 text-xs text-slate-700 font-medium hover:bg-slate-50 cursor-pointer">Siguiente ›</span>
+      </div>
+    </div>
+  </div>
+
+  <p class="mt-4 text-xs text-slate-400">Mockup 03 · Las mismas funciones que ya existen, con la piel nueva: navbar claro, jerarquía limpia y botones consistentes.</p>
+</main>
+</body>
+</html>

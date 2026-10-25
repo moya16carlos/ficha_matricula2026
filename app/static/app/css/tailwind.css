@@ -1,0 +1,55 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+    background: linear-gradient(135deg, #1e3a8a, #1e40af, #2563eb);
+    background-size: 400% 400%;
+    animation: gradientBackground 15s ease infinite;
+    font-family: 'Arial', sans-serif;
+}
+
+.home-container {
+    min-height: 100vh; /* Altura completa de la ventana para asegurarse de que todo ocupe el espacio completo */
+    background: none !important;
+}
+
+.button-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.btn-home {
+    font-weight: bold;
+    font-size: 1.25rem;
+    padding: 15px 30px;
+    border-radius: 8px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.btn-home:hover {
+    transform: translateY(-5px);
+}
+
+@keyframes gradientBackground {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* Ajuste para imágenes */
+img {
+    border-radius: 50%;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.text-center {
+    text-align: center;
+}
+
+
+

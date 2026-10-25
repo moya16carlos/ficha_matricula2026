@@ -1,0 +1,140 @@
+<!-- templates/estudiantes_admin.html -->
+{% extends "base.html" %}
+
+{% block title %}Listar Estudiantes por Curso{% endblock %}
+
+{% block content %}
+<main class="max-w-7xl mx-auto px-6 py-7">
+  <!-- Breadcrumb + encabezado -->
+  <nav class="flex items-center gap-1.5 text-xs text-slate-400 mb-3">
+    <a href="{% url 'home' %}" class="hover:text-indigo-600">Inicio</a><span>/</span>
+    <span class="text-slate-600 font-medium">Estudiantes por curso</span>
+  </nav>
+  <header class="mb-6">
+    <h1 class="text-2xl font-bold text-slate-900">Estudiantes por Curso</h1>
+    <p class="text-sm text-slate-500 mt-0.5">Elige un curso, ve su nómina y genera el PDF grupal.</p>
+  </header>
+
+  <!-- Sección de Enseñanza Básica -->
+  <div class="mb-8">
+    <h2 class="text-sm font-bold uppercase tracking-widest text-slate-400 mb-3">Enseñanza Básica</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      {% for curso in cursos_basica %}
+      <div class="bg-white ring-1 ring-slate-200 rounded-2xl shadow-sm p-5 text-center hover:ring-indigo-200 transition">
+        <h3 class="font-semibold text-slate-800">{{ curso }}</h3>
+        <button class="mt-3 w-full rounded-xl bg-white ring-1 ring-indigo-200 px-4 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 transition" onclick="mostrarEstudiantes('{{ curso }}')">Ver estudiantes</button>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Sección de Enseñanza Media -->
+  <div class="mb-8">
+    <h2 class="text-sm font-bold uppercase tracking-widest text-slate-400 mb-3">Enseñanza Media</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      {% for curso in cursos_media %}
+      <div class="bg-white ring-1 ring-slate-200 rounded-2xl shadow-sm p-5 text-center hover:ring-indigo-200 transition">
+        <h3 class="font-semibold text-slate-800">{{ curso }}</h3>
+        <button class="mt-3 w-full rounded-xl bg-white ring-1 ring-indigo-200 px-4 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 transition" onclick="mostrarEstudiantes('{{ curso }}')">Ver estudiantes</button>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Sección de Egresados/Inactivos -->
+  <div class="mb-8">
+    <h2 class="text-sm font-bold uppercase tracking-widest text-slate-400 mb-3">Egresados / Inactivos</h2>
+    <div class="bg-white ring-1 ring-slate-200 rounded-2xl shadow-sm p-5 text-center max-w-sm">
+      <h3 class="font-semibold text-slate-800">Egresados / Inactivos</h3>
+      <button class="mt-3 w-full rounded-xl bg-white ring-1 ring-indigo-200 px-4 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 transition" onclick="mostrarEstudiantes('inactivos')">Ver estudiantes</button>
+    </div>
+  </div>
+
+  <!-- Tabla de Estudiantes -->
+  <div id="tabla-estudiantes" class="hidden mt-8">
+    <div class="bg-white ring-1 ring-slate-200 rounded-2xl shadow-sm overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
+        <h2 class="font-bold text-slate-800">Estudiantes del curso <span id="curso-seleccionado" class="text-indigo-700"></span></h2>
+        <button onclick="generarPdfCurso()" class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 transition">
+          Generar PDF del curso
+        </button>
+      </div>
+      <table class="min-w-full text-sm">
+        <thead class="bg-slate-50 border-b border-slate-200 text-[11px] uppercase tracking-wide text-slate-500">
+          <tr>
+            <th class="px-4 py-3 text-left font-semibold">Estudiante</th>
+            <th class="px-4 py-3 text-left font-semibold">RUT</th>
+            <th class="px-4 py-3 text-left font-semibold">Curso</th>
+            <th class="px-4 py-3 text-left font-semibold">Estado</th>
+            <th class="px-4 py-3 text-right font-semibold">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="estudiantes-table" class="divide-y divide-slate-100">
+          {% for estudiante in estudiantes %}
+          <tr class="hover:bg-indigo-50/40" data-curso="{{ estudiante.curso }}">
+            <td class="px-4 py-2.5 font-medium text-slate-800">{{ estudiante.nombre_completo }}</td>
+            <td class="px-4 py-2.5 font-mono text-slate-600">{{ estudiante.rut }}</td>
+            <td class="px-4 py-2.5 text-slate-600">{{ estudiante.curso }}</td>
+            <td class="px-4 py-2.5" data-estado><span class="rounded-full bg-emerald-50 ring-1 ring-emerald-200 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">{{ estudiante.estado }}</span></td>
+            <td class="px-4 py-2.5 text-right">
+              <a href="{% url 'imprimir_estudiante' estudiante.rut %}" class="rounded-lg bg-white ring-1 ring-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50">Imprimir</a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="px-4 py-8 text-center text-sm text-slate-500">No hay estudiantes registrados en este curso</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<script>
+    function mostrarEstudiantes(curso) {
+        const tablaEstudiantes = document.getElementById('tabla-estudiantes');
+        const estudiantesTable = document.getElementById('estudiantes-table');
+        const cursoSeleccionado = document.getElementById('curso-seleccionado');
+
+        // Mostrar la tabla de estudiantes
+        tablaEstudiantes.classList.remove('hidden');
+        tablaEstudiantes.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        cursoSeleccionado.innerText = curso;
+
+        // Filtrar estudiantes por curso
+        const rows = estudiantesTable.querySelectorAll('tr[data-curso]');
+        rows.forEach(row => {
+            const estudianteCurso = row.getAttribute('data-curso').trim().toLowerCase();
+            const estadoTd = row.querySelector('td[data-estado]');
+            const estadoEstudiante = estadoTd ? estadoTd.textContent.trim().toLowerCase() : '';
+
+            if (curso.toLowerCase() === 'inactivos') {
+                // Mostrar solo estudiantes inactivos o egresados
+                if (estadoEstudiante === 'inactivo' || estadoEstudiante === 'egresado') {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            } else {
+                // Mostrar estudiantes del curso seleccionado
+                if (estudianteCurso === curso.toLowerCase() && estadoEstudiante !== 'egresado') {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            }
+        });
+    }
+
+    function generarPdfCurso() {
+        const curso = document.getElementById('curso-seleccionado').innerText;
+        if (curso) {
+            window.location.href = `/imprimir_estudiantes/${curso}/`;
+        } else {
+            alert("Por favor seleccione un curso para generar el PDF.");
+        }
+    }
+</script>
+
+{% endblock %}

@@ -1,0 +1,508 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Registro de Estudiante{% endblock %}
+
+{% block content %}
+<section class="py-7">
+  <div class="w-full max-w-6xl mx-auto rounded-3xl ring-1 ring-slate-200 shadow-sm bg-white overflow-hidden">
+
+    <!-- Breadcrumb + Header -->
+    <header class="px-8 pt-6 pb-5 border-b border-slate-200 flex flex-wrap items-center gap-4 justify-between">
+      <div class="flex items-center gap-3">
+        <img src="{% static 'app/img/logo.png' %}" class="h-11 w-11 rounded-xl ring-1 ring-slate-200" alt="Logo Liceo">
+        <div>
+          <nav class="flex items-center gap-1.5 text-xs text-slate-400 mb-0.5">
+            <a href="{% url 'home' %}" class="hover:text-indigo-600">Inicio</a><span>/</span>
+            <span class="text-slate-600 font-medium">Registro de estudiante</span>
+          </nav>
+          <h1 class="text-xl font-bold text-slate-900">Registro de Estudiante</h1>
+          <p class="text-slate-500 text-xs">Completa los datos para matricular al estudiante</p>
+        </div>
+      </div>
+
+      <!-- Selector de Año Visible (GET) -->
+      <form method="get" class="flex items-end gap-3">
+        <div>
+          <label class="block text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1">Año visible</label>
+          <select name="anio"
+                  class="w-36 rounded-lg border border-slate-300 bg-slate-50 text-slate-700 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  onchange="this.form.submit()">
+            {% for y in anios_visibles %}
+              <option value="{{ y }}" {% if anio_sel|stringformat:'s' == y|stringformat:'s' %}selected{% endif %}>{{ y }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <span class="text-slate-400 text-xs pb-2">Mostrando cursos de {{ anio_sel }}</span>
+      </form>
+    </header>
+
+    <!-- Mensajes Django -->
+    {% if messages %}
+    <div class="px-8 pt-6">
+      {% for message in messages %}
+        <div class="mb-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow">{{ message }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Formulario -->
+    <form id="newStudentForm" method="POST" action="{% url 'registro_alumno' %}" class="px-8 pb-10 pt-6 space-y-10">
+      {% csrf_token %}
+      <!-- Mantener el año al enviar -->
+      <input type="hidden" name="anio_filtro" value="{{ anio_sel }}"/>
+
+      <!-- Datos del estudiante -->
+      <section class="rounded-2xl border border-slate-200 p-6 bg-white">
+        <h2 class="text-lg font-semibold text-slate-800 mb-4">Datos del Estudiante</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div>
+            <label class="block text-sm font-medium text-slate-700">RUT (sin puntos ni guion)</label>
+            <input id="rut" name="rut" type="text" required
+                   placeholder="Ej: 12345678K"
+                   class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900">
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Nombre Completo</label>
+            <input id="nombre_completo" name="nombre_completo" type="text" required
+                   class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900">
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Curso</label>
+            <!-- cursos ya viene filtrado por anio_sel desde la vista -->
+            <select id="curso" name="curso" required
+                    class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900">
+              <option value="">Seleccionar Curso</option>
+              {% for c in cursos %}
+              <option value="{{ c.id }}">
+                {{ c.nivel }}{% if c.letra %} {{ c.letra }}{% endif %} - {{ c.anio }}
+              </option>
+              {% empty %}
+              <option value="" disabled>No hay cursos para {{ anio_sel }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Fecha de Nacimiento</label>
+            <input id="fecha_nacimiento" name="fecha_nacimiento" type="date" required
+                   class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900">
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Sexo</label>
+            <select id="sexo" name="sexo" required
+                    class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900">
+              <option value="">Seleccionar</option>
+              <option>Masculino</option><option>Femenino</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Nacionalidad</label>
+            <input id="nacionalidad" name="nacionalidad" type="text"
+                   class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900">
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Domicilio</label>
+            <input id="domicilio" name="domicilio" type="text"
+                   class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900">
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Comuna</label>
+            <input id="comuna" name="comuna" type="text"
+                   class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900">
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Ascendencia Indígena</label>
+            <select id="ascendencia_indigena" name="ascendencia_indigena"
+                    class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900">
+              <option value="">Seleccionar</option><option>No</option><option>Sí</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Etnia</label>
+            <input id="etnia" name="etnia" type="text"
+                   class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Pertenece al PIE</label>
+            <select id="pertenece_al_pie" name="pertenece_al_pie"
+                    class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900">
+              <option value="">Seleccionar</option><option>No</option><option>Sí</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Ha repetido curso</label>
+            <select id="ha_repetido_curso" name="ha_repetido_curso"
+                    class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900">
+              <option value="">Seleccionar</option><option>No</option><option>Sí</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Estado del Estudiante</label>
+            <select id="estado" name="estado" required
+                    class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900">
+              <option value="">Seleccionar Estado</option>
+              <option>Activo</option><option>Inactivo</option><option>Egresado</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Establecimiento de procedencia</label>
+            <input id="de_donde_viene" name="de_donde_viene" type="text"
+                   class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900">
+          </div>
+        </div>
+      </section>
+
+      <!-- Padres -->
+      <section class="rounded-2xl border border-slate-200 p-6 bg-white">
+        <h2 class="text-lg font-semibold text-slate-800 mb-4">Información de los Padres</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <!-- Madre -->
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Nombre de la Madre</label>
+            <input id="nombre_madre" name="nombre_madre" type="text" class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-indigo-500">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700">RUT de la Madre</label>
+            <input id="rut_madre" name="rut_madre" type="text" class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-indigo-500">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Teléfono de la Madre</label>
+            <input id="telefono_madre" name="telefono_madre" type="text" class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-indigo-500">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Correo Madre</label>
+            <input id="email_madre" name="email_madre" type="text" class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-indigo-500">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Nivel educacional Madre</label>
+            <input id="nivel_educacional_madre" name="nivel_educacional_madre" type="text" class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-indigo-500">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Ocupación Madre</label>
+            <input id="ocupacion_madre" name="ocupacion_madre" type="text" class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-indigo-500">
+          </div>
+
+          <!-- Padre -->
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Nombre del Padre</label>
+            <input id="nombre_padre" name="nombre_padre" type="text" class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-indigo-500">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700">RUT del Padre</label>
+            <input id="rut_padre" name="rut_padre" type="text" class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-indigo-500">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Teléfono del Padre</label>
+            <input id="telefono_padre" name="telefono_padre" type="text" class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-indigo-500">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Correo Padre</label>
+            <input id="email_padre" name="email_padre" type="text" class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-indigo-500">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Nivel educacional Padre</label>
+            <input id="nivel_educacional_padre" name="nivel_educacional_padre" type="text" class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-indigo-500">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Ocupación Padre</label>
+            <input id="ocupacion_padre" name="ocupacion_padre" type="text" class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-indigo-500">
+          </div>
+        </div>
+      </section>
+
+      <!-- Apoderado (automático) -->
+      <section class="rounded-2xl border border-slate-200 p-6 bg-white">
+        <h2 class="text-lg font-semibold text-slate-800 mb-4">Información del Apoderado (automática)</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Nombre del Apoderado</label>
+            <input type="text" name="nombre_apoderado" value="{{ nombre_apoderado }}" readonly
+                   class="w-full rounded-xl border border-slate-300 bg-slate-100 px-4 py-3 text-slate-900">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700">RUT del Apoderado</label>
+            <input type="text" name="rut_apoderado" value="{{ rut_apoderado }}" readonly
+                   class="w-full rounded-xl border border-slate-300 bg-slate-100 px-4 py-3 text-slate-900">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Correo Electrónico del Apoderado</label>
+            <input type="email" name="email_apoderado" value="{{ email_apoderado }}" readonly
+                   class="w-full rounded-xl border border-slate-300 bg-slate-100 px-4 py-3 text-slate-900">
+          </div>
+          <!-- Campos editables opcionales -->
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Teléfono Apoderado</label>
+            <input id="telefono_apoderado" name="telefono_apoderado" type="text"
+                   class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-indigo-500">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Nivel educacional Apoderado</label>
+            <input id="nivel_educacional_apoderado" name="nivel_educacional_apoderado" type="text"
+                   class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-indigo-500">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Ocupación Apoderado</label>
+            <input id="ocupacion_apoderado" name="ocupacion_apoderado" type="text"
+                   class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-indigo-500">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Fecha nacimiento apoderado</label>
+            <input id="fecha_nacimiento_apoderado" name="fecha_nacimiento_apoderado" type="date"
+                   class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-indigo-500">
+          </div>
+
+        </div>
+      </section>
+
+      <!-- Apoderado suplente -->
+      <section class="rounded-2xl border border-slate-200 p-6 bg-white">
+        <h2 class="text-lg font-semibold text-slate-800 mb-4">Apoderado Suplente</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div><label class="block text-sm font-medium text-slate-700">Nombre</label>
+            <input id="nombre_apoderado_suplente" name="nombre_apoderado_suplente" type="text" class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-indigo-500"></div>
+          <div><label class="block text-sm font-medium text-slate-700">RUT</label>
+            <input id="rut_apoderado_suplente" name="rut_apoderado_suplente" type="text" class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-indigo-500"></div>
+          <div><label class="block text-sm font-medium text-slate-700">Teléfono</label>
+            <input id="telefono_apoderado_suplente" name="telefono_apoderado_suplente" type="text" class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-indigo-500"></div>
+          <div><label class="block text-sm font-medium text-slate-700">Correo</label>
+            <input id="email_apoderado_suplente" name="email_apoderado_suplente" type="text" class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-indigo-500"></div>
+          <div><label class="block text-sm font-medium text-slate-700">Nivel educacional</label>
+            <input id="nivel_educacional_apoderado_suplente" name="nivel_educacional_apoderado_suplente" type="text" class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-indigo-500"></div>
+          <div><label class="block text-sm font-medium text-slate-700">Ocupación</label>
+            <input id="ocupacion_apoderado_suplente" name="ocupacion_apoderado_suplente" type="text" class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-indigo-500"></div>
+          <!-- NUEVO: Parentesco con el estudiante -->
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Parentesco con el estudiante</label>
+            <input id="parentesco_apoderado_suplente" name="parentesco_apoderado_suplente" type="text"
+                   class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-indigo-500">
+          </div>
+        </div>
+      </section>
+
+      <!-- Salud y Social -->
+      <section class="rounded-2xl border border-slate-200 p-6 bg-white">
+        <h2 class="text-lg font-semibold text-slate-800 mb-4">Información Social y de Salud</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Vive con</label>
+            <select id="vive_con" name="vive_con"
+                    class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900">
+              <option>Ambos Padres</option><option>Padre</option><option>Madre</option><option>Otros</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Resolución Judicial</label>
+            <select id="resolucion_judicial" name="resolucion_judicial"
+                    class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900">
+              <option>No</option><option>Sí</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700">¿Problemas de salud o alergia?</label>
+            <select id="problemas_salud" name="problemas_salud"
+                    class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900">
+              <option>No</option><option>Sí</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Descripción</label>
+            <input id="descripcion_problemas_salud" name="descripcion_problemas_salud" type="text"
+                   class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-indigo-500">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Impide Educación Física</label>
+            <select id="impide_educacion_fisica" name="impide_educacion_fisica"
+                    class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900">
+              <option>No</option><option>Sí</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Sistema de salud</label>
+            <select id="sistema_salud" name="sistema_salud"
+                    class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900">
+              <option>Fonasa</option><option>Isapre</option><option>Particular</option>
+            </select>
+          </div>
+          <!-- NUEVO: Seguro salud complementario -->
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Seguro salud complementario</label>
+            <input id="seguro_salud_complementario" name="seguro_salud_complementario" type="text"
+                   class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-indigo-500">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Tipo de transporte</label>
+            <input id="tipo_transporte" name="tipo_transporte" type="text"
+                   class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-indigo-500">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Opta por clases de religión</label>
+            <select id="opta_religion" name="opta_religion"
+                    class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900">
+              <option value="false">No</option><option value="true">Sí</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Acepta fotografías / videos</label>
+            <select id="acepta_fotografias" name="acepta_fotografias"
+                    class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900">
+              <option value="false">No</option><option value="true">Sí</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Fecha de matrícula</label>
+            <input id="fecha_matricula" name="fecha_matricula" type="date" value="{{ fecha_actual }}"
+                   class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-indigo-500">
+          </div>
+        </div>
+      </section>
+
+      <!-- Acciones -->
+      <div class="flex flex-wrap justify-center gap-4">
+        <button type="submit" name="submit_action" value="save_finish"
+                class="w-48 rounded-xl bg-indigo-600 text-white px-6 py-3 font-semibold shadow-sm hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 transition">
+          Guardar Estudiante
+        </button>
+        <button type="submit" name="submit_action" value="save_new"
+                class="w-52 rounded-xl bg-white ring-1 ring-slate-300 text-slate-700 px-6 py-3 font-semibold hover:bg-slate-50 transition">
+          Guardar y agregar otro
+        </button>
+        <button type="submit" name="submit_action" value="save_finish"
+                class="w-44 rounded-xl bg-slate-100 text-slate-600 px-6 py-3 font-medium hover:bg-slate-200 transition">
+          Finalizar
+        </button>
+      </div>
+    </form>
+  </div>
+</section>
+
+<script>
+(function(){
+  const form = document.getElementById('newStudentForm');
+  let lastSubmitter = null;
+
+  function toast(msg, type){
+    const el = document.createElement('div');
+    el.className = `fixed top-5 right-5 z-50 px-4 py-3 rounded-xl text-white shadow-lg ${type==='success'?'bg-green-600':'bg-red-600'}`;
+    el.textContent = msg;
+    document.body.appendChild(el);
+    setTimeout(()=>{ el.style.opacity='0'; el.style.transition='opacity .6s'; setTimeout(()=>el.remove(),700); }, 2200);
+  }
+
+  function normRut(v){
+    return (v || '').toString().replace(/[.\-]/g,'').toUpperCase();
+  }
+
+  function resetOnlyStudentFields(){
+    const ids = [
+      'rut','nombre_completo','curso','fecha_nacimiento','sexo',
+      'nacionalidad','domicilio','comuna','ascendencia_indigena','etnia',
+      'pertenece_al_pie','ha_repetido_curso','estado','de_donde_viene',
+      'problemas_salud','descripcion_problemas_salud','impide_educacion_fisica',
+      'sistema_salud','tipo_transporte','opta_religion','acepta_fotografias','fecha_matricula',
+      'nombre_madre','rut_madre','telefono_madre','email_madre','nivel_educacional_madre','ocupacion_madre',
+      'nombre_padre','rut_padre','telefono_padre','email_padre','nivel_educacional_padre','ocupacion_padre',
+      'nombre_apoderado_suplente','rut_apoderado_suplente','telefono_apoderado_suplente','email_apoderado_suplente',
+      'nivel_educacional_apoderado_suplente','ocupacion_apoderado_suplente',
+      'vive_con','resolucion_judicial'
+    ];
+    ids.forEach(id=>{
+      const el = document.getElementById(id);
+      if(!el) return;
+      if(el.tagName === 'SELECT'){
+        el.selectedIndex = 0;
+      }else{
+        el.value = '';
+      }
+    });
+    // Mantén fecha_matricula por defecto del sistema si quieres:
+    const f = document.getElementById('fecha_matricula');
+    if (f && f.getAttribute('value')) f.value = f.getAttribute('value');
+    // focus al primer campo
+    document.getElementById('rut')?.focus();
+  }
+
+  // Detecta qué botón se presionó
+  document.querySelectorAll('#newStudentForm button[type="submit"]').forEach(btn=>{
+    btn.addEventListener('click',()=>{ lastSubmitter = btn; });
+  });
+
+  form.addEventListener('submit', async function(e){
+    e.preventDefault();
+
+    // Normaliza RUT antes de enviar
+    const rutEl = document.getElementById('rut');
+    if (!rutEl.value.trim()){
+      toast('El RUT es obligatorio','error');
+      return;
+    }
+    rutEl.value = normRut(rutEl.value);
+
+    // Incluye el botón presionado en FormData (clave para submit_action)
+    const fd = new FormData(form, e.submitter || lastSubmitter || undefined);
+
+    try{
+      const resp = await fetch(form.action, {
+        method:'POST',
+        body: fd,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      });
+
+      // Éxito 201 con JSON
+      if (resp.status === 201){
+        const data = await resp.json().catch(()=>({}));
+        toast('Alumno registrado correctamente','success');
+
+        // Si el backend indica que es "guardar y agregar otro"
+        if (data && data.reset_only_student_fields){
+          resetOnlyStudentFields();
+          // preserva año visible y datos del apoderado automáticamente
+          return;
+        }
+
+        // Caso normal: finalizar
+        window.location.href = "{% url 'alumno_matriculado' %}";
+        return;
+      }
+
+      // Errores de validación (400 JSON)
+      if (resp.status === 400){
+        const data = await resp.json().catch(()=>({}));
+        if (data && Array.isArray(data.errors)){
+          data.errors.forEach(m => toast(m, 'error'));
+          return;
+        }
+      }
+
+      // Si no fue JSON, recargamos HTML para ver mensajes del servidor
+      const html = await resp.text();
+      const tmp = document.createElement('div');
+      tmp.innerHTML = html;
+
+      const nuevo = tmp.querySelector('form#newStudentForm');
+      const actual = document.querySelector('form#newStudentForm');
+      if (nuevo && actual){
+        actual.parentElement.replaceWith(nuevo.parentElement);
+      }else{
+        toast('No se pudo guardar. Revisa los campos.', 'error');
+      }
+    }catch(err){
+      console.error(err);
+      toast('Error de red al guardar el estudiante', 'error');
+    }
+  });
+})();
+</script>
+{% endblock %}

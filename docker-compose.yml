@@ -1,0 +1,25 @@
+services:
+  web:
+    build: .
+    container_name: matriculas_lsp_web
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - static_data:/app/staticfiles
+      - media_data:/app/media
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.matriculas.rule=Host(`ficha.liceosp.cl`)"
+      - "traefik.http.routers.matriculas.entrypoints=websecure"
+      - "traefik.http.routers.matriculas.tls=true"
+      - "traefik.http.routers.matriculas.tls.certresolver=letsencrypt"
+      - "traefik.http.services.matriculas.loadbalancer.server.port=8000"
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             gunicorn matriculas_lsp.wsgi:application --bind 0.0.0.0:8000 --workers 2 --threads 2 --timeout 120"
+
+volumes:
+  static_data:
+  media_data:
