@@ -692,9 +692,10 @@
       v = v.replace(/[.\-\s]/g, '').toUpperCase();
       if (!/^\d{7,8}[0-9K]$/.test(v)) return false;
       const cuerpo = v.slice(0, -1), dvIn = v.slice(-1);
-      let m = 0, s = 1;
-      for (let i = cuerpo.length - 1; i >= 0; i--) { s = (s + parseInt(cuerpo[i]) * (9 - m % 6)) % 11; m++; }
-      return dvIn === (s === 0 ? '0' : s === 10 ? 'K' : String(s - 1));
+      let sum = 0, factor = 2;
+      for (let i = cuerpo.length - 1; i >= 0; i--) { sum += parseInt(cuerpo[i]) * factor; factor = factor === 7 ? 2 : factor + 1; }
+      const r = 11 - (sum % 11);
+      return dvIn === (r === 11 ? '0' : r === 10 ? 'K' : String(r));
     }
     const RULES = {
       rut: v => v === '' ? null : (dvOk(v) ? null : 'RUT inválido (revisa el dígito verificador)'),
