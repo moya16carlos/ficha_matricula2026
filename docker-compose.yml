@@ -9,7 +9,7 @@ services:
       - static_data:/app/staticfiles
       - media_data:/app/media
     ports:
-      - "8000:8000"
+      - "8001:8000"
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.matriculas.rule=Host(`ficha.liceosp.cl`)"
