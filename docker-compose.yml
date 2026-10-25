@@ -8,6 +8,8 @@ services:
     volumes:
       - static_data:/app/staticfiles
       - media_data:/app/media
+    ports:
+      - "8000:8000"
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.matriculas.rule=Host(`ficha.liceosp.cl`)"
@@ -19,14 +21,6 @@ services:
       sh -c "python manage.py migrate &&
              python manage.py collectstatic --noinput &&
              gunicorn matriculas_lsp.wsgi:application --bind 0.0.0.0:8000 --workers 2 --threads 2 --timeout 120"
-    networks:
-      - proxy
-
-networks:
-  proxy:
-    external: true
-    # nombre de TU red de traefik: averígualo con `docker network ls` y ajústalo en .env
-    name: ${TRAEFIK_NETWORK:-proxy}
 
 volumes:
   static_data:
