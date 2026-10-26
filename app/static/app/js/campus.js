@@ -55,7 +55,7 @@
       const wrapper = document.createElement('div'); wrapper.className = 'campus-table-wrap';
       table.before(wrapper); wrapper.append(table);
     }
-    if (['listar_estudiantes','listar_estudiantes_anio','listar_estudiantes_anio_var','listar_usuarios','listar_estudiantes_admin'].includes(document.body.dataset.page)) {
+    if (['listar_estudiantes','listar_estudiantes_anio','listar_estudiantes_anio_var','listar_usuarios','listar_estudiantes_admin','registro_actividad'].includes(document.body.dataset.page)) {
       table.dataset.campusCards = '';
       const labels = [...table.querySelectorAll('thead th')].map(th => th.textContent.trim());
       table.querySelectorAll('tbody tr').forEach(row => [...row.cells].forEach((cell, i) => {
@@ -194,7 +194,7 @@
   const detail = document.querySelector('[data-campus-detail]');
   if(detail) {
     const panels=[...detail.querySelectorAll('[data-campus-panel]')];
-    const groups=[['Resumen',['estudiante']],['Familia y apoderados',['padres','apoderados']],['Salud y antecedentes',['salud','transporte']],['Documentos',['documentos']],['Identificación',['rut']]];
+    const groups=[['Resumen',['estudiante']],['Familia y apoderados',['padres','apoderados']],['Salud y antecedentes',['salud','transporte']],['Documentos',['documentos']],['Historial escolar',['historial']],['Identificación',['rut']]];
     const available=groups.filter(([,ids])=>panels.some(panel=>ids.includes(panel.dataset.campusPanel)));
     const nav=document.createElement('nav');nav.className='campus-detail-tabs';nav.setAttribute('aria-label','Secciones de la ficha');detail.before(nav);
     function showGroup(index) {
@@ -203,7 +203,13 @@
     }
     available.forEach(([label],i)=>{const button=makeButton(label,'');button.addEventListener('click',()=>showGroup(i));nav.append(button);});
     if(available.length)showGroup(0);
-    document.querySelectorAll('a[href="#seccion-rut"]').forEach(anchor=>anchor.addEventListener('click',()=>showGroup(available.findIndex(([,ids])=>ids.includes('rut')))));
+    function activateHash(hash) {
+      const panel = [...panels].find(panel => '#' + panel.id === hash);
+      const index = available.findIndex(([,ids]) => ids.includes(panel?.dataset.campusPanel));
+      if (index >= 0) showGroup(index);
+    }
+    activateHash(location.hash);
+    document.querySelectorAll('a[href="#seccion-rut"],a[href="#historial-escolar"]').forEach(anchor=>anchor.addEventListener('click',()=>activateHash(anchor.hash)));
   }
 
   const directory = document.querySelector('[data-campus-directory]');

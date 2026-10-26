@@ -288,6 +288,7 @@ def nuevo_estudiante_view(request):
                     defaults=MatriculaAnual.defaults_desde_estudiante(est),
                 )
 
+            request.audit_objeto = f'Estudiante #{est.pk} · {curso_obj.anio}'
             # Devolver URL de impresión con ?anio correcto
             imprimir_url = request.build_absolute_uri(f"/imprimir-estudiante/{est.rut}/?anio={curso_obj.anio}")
             return JsonResponse({
@@ -394,6 +395,7 @@ def buscar_estudiante(request):
                     'telefono_apoderado_suplente': estudiante.telefono_apoderado_suplente or '',
                     'email_apoderado_suplente': estudiante.email_apoderado_suplente or '',
                 }
+                request.audit_objeto = f'Estudiante #{estudiante.pk}'
                 return JsonResponse({'status': 'success', 'data': data})
             except Estudiante.DoesNotExist:
                 return JsonResponse({'status': 'error', 'message': 'No se encontró un estudiante con ese RUT.'})
@@ -596,6 +598,7 @@ def guardar_estudiante(request):
         messages.error(request, f'Error al guardar el estudiante: {e}')
         return redirect('nuevo_estudiante')
 
+    request.audit_objeto = f'Estudiante #{estudiante.pk} · {curso.anio}'
     # Éxito
     if _is_ajax(request):
         payload_ok = {"ok": True, "id": estudiante.id, "rut": estudiante.rut}
@@ -617,6 +620,9 @@ def guardar_estudiante(request):
 @role_required(*PERMITIDOS_TODOS)
 def listar_estudiantes(request):
     q = (request.GET.get('q') or '').strip()
+    estado_filtro = request.GET.get('estado', '')
+    if estado_filtro not in dict(Estudiante._meta.get_field('estado').choices):
+        estado_filtro = ''
     curso_id = (request.GET.get('curso') or '').strip()
     anio_param = (request.GET.get('anio') or '').strip()
 
@@ -819,7 +825,10 @@ def listar_estudiantes(request):
                     EstuRow(e.id, e.rut, e.nombre_completo, e.curso, e.estado)
                 )
 
+    if estado_filtro:
+        estudiantes_rows = [e for e in estudiantes_rows if e.estado == estado_filtro]
     return render(request, 'app/listar_estudiantes.html', {
+        'estado_filtro': estado_filtro,
         'cursos': cursos,
         'curso_id': curso_id,
         'curso_seleccionado': curso_seleccionado,
@@ -949,6 +958,8 @@ def buscar_estudiantes_por_rut(request):
         curso_texto, curso_obj, tiene = _curso_en_anio(e, anio_usado)
 
         data.append({
+            'id': e.id,
+            'estado_actual': e.estado,
             'rut': e.rut,
             'nombre_completo': e.nombre_completo,
             'curso_text': curso_texto,
@@ -1008,6 +1019,7 @@ def buscar_estudiantes_por_rut(request):
             'fecha_matricula': e.fecha_matricula.strftime('%Y-%m-%d') if e.fecha_matricula else None,
         })
 
+    request.audit_objeto = ', '.join(f"Estudiante #{e['id']}" for e in data) or 'Sin coincidencias'
     resp = JsonResponse(data, safe=False)
     resp['X-Anio-Usado'] = str(anio_usado)
     resp['X-Anios-Visibles'] = ",".join(str(a) for a in visibles)
@@ -1058,6 +1070,10 @@ def asignar_curso_en_anio(request):
     if existente:
         _require_curso_perm(request.user, 'edit', existente.curso)
 
+    request.audit_objeto = f'Estudiante #{e.pk} · {anio}'
+    if e.estado == 'Retirado' or (existente and existente.estado == 'Retirado'):
+        return JsonResponse({'ok': False, 'error': 'Registra la reincorporación desde el Historial escolar antes de cambiar el curso.'}, status=400)
+
     # Evita duplicados y asigna
     ma, _ = MatriculaAnual.objects.update_or_create(
         estudiante=e, anio=anio,
@@ -1072,6 +1088,7 @@ def asignar_curso_en_anio(request):
             e.curso = curso
             e.save(update_fields=['curso'])
 
+    request.audit_objeto = f'Estudiante #{e.pk} · {anio}'
     # Verificación inmediata
     curso_texto, curso_obj, tiene = _curso_en_anio(e, anio)
     return JsonResponse({
@@ -1123,6 +1140,21 @@ def detalles_estudiante(request, estudiante_id):
     _require_curso_perm(request.user, 'view', estudiante.curso)
     estudiante = _estudiante_en_matricula(estudiante, ma)
 
+    from app.historial import retiro_pendiente
+    from app.models import MovimientoEstudiante
+    actual = Estudiante.objects.select_related('curso').get(pk=estudiante_id)
+    movimientos = MovimientoEstudiante.objects.filter(estudiante_id=estudiante_id).filter(
+        filtro_q_por_niveles_permitidos(request.user, 'matricula__curso__nivel')
+    ).select_related('matricula__curso')
+    pendiente = retiro_pendiente(actual)
+    ultimo_anio = max(actual.curso.anio, ma_qs.order_by('-anio').values_list('anio', flat=True).first() or 0)
+    try:
+        _require_curso_perm(request.user, 'edit', actual.curso)
+        _require_curso_perm(request.user, 'edit', curso_view)
+        puede_movimiento = True
+    except PermissionDenied:
+        puede_movimiento = False
+
     # 5) Documentos (los de siempre)
     documentos = DocumentoEstudiante.objects.filter(estudiante=estudiante)
 
@@ -1134,6 +1166,9 @@ def detalles_estudiante(request, estudiante_id):
         'anio_view': anio_view,       # año que estás mostrando
         'anio_forzado': anio_forzado,
         'anio_activo': anio_activo,
+        'movimientos': movimientos, 'retiro_pendiente': pendiente,
+        'puede_retirar': puede_movimiento and actual.estado == 'Activo' and anio_view == ultimo_anio,
+        'puede_reincorporar': puede_movimiento and pendiente is not None,
     }
     return render(request, 'app/detalles_estudiante.html', ctx)
 
@@ -1141,6 +1176,7 @@ def detalles_estudiante(request, estudiante_id):
 def descargar_documento(request, documento_id):
     documento = get_object_or_404(DocumentoEstudiante, id=documento_id)
     _require_curso_perm(request.user, 'view', documento.estudiante.curso)
+    request.audit_objeto = f'Documento #{documento.pk} · Estudiante #{documento.estudiante_id}'
     response = FileResponse(documento.archivo, as_attachment=True, filename=documento.nombre)
     return response
 
@@ -1224,6 +1260,12 @@ def listar_estudiantes_anio(request, anio=None):
             except ValueError:
                 pass
 
+    estado_filtro = request.GET.get('estado', '')
+    if estado_filtro in dict(Estudiante._meta.get_field('estado').choices):
+        qs = qs.filter(estado=estado_filtro)
+    else:
+        estado_filtro = ''
+
     # Búsqueda libre
     if q:
         qs = qs.filter(
@@ -1234,6 +1276,7 @@ def listar_estudiantes_anio(request, anio=None):
         )
 
     ctx = {
+        'estado_filtro': estado_filtro,
         'anio': anio,
         'years': years,
         'cursos': cursos,              # incluye Por Asignar y Egresados (creados si faltaban)

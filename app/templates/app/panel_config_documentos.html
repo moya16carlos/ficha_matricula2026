@@ -1031,7 +1031,7 @@
           <div class="flex items-center gap-3">
             <span class="grid place-items-center h-8 w-8 rounded-xl bg-slate-100 ring-1 ring-slate-200 text-xs font-bold text-slate-600">12</span>
             <div>
-              <h2 class="font-bold text-slate-900 leading-tight">Registro de actividad</h2>
+              <h2 class="font-bold text-slate-900 leading-tight">Actividad de importaciones (este navegador)</h2>
               <p class="text-xs text-slate-500">Historial local del navegador (no se guarda en el servidor).</p>
             </div>
           </div>
@@ -1050,6 +1050,7 @@
         </div>
         <div class="p-6">
 
+        <a class="campus-btn mb-4" href="{% url 'registro_actividad' %}">Ver registro de actividad de usuarios</a>
         <div id="log-box" class="rounded-lg border border-slate-200 bg-slate-50 p-3 max-h-56 overflow-auto">
           <ul id="log-list" class="space-y-2 text-sm text-slate-700">
             <!-- Se llena por JS -->

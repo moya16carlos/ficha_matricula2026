@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block title %}Registro de actividad · Matrículas LSP{% endblock %}
+{% block content %}
+<section>
+  <header class="campus-page-heading"><div><div class="campus-eyebrow">Administración / Auditoría</div><h1>Registro de actividad</h1><p>Acciones realizadas en el sistema desde la activación de este registro.</p></div></header>
+  <form method="get" class="campus-card campus-card-pad mb-6">
+    {% if form.non_field_errors %}<div role="alert">{{ form.non_field_errors }}</div>{% endif %}
+    <div class="grid md:grid-cols-4 gap-4">
+      {% for field in form %}<div><label class="block mb-2" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.errors %}<div role="alert" class="text-red-600 text-sm">{{ field.errors }}</div>{% endif %}</div>{% endfor %}
+    </div>
+    <div class="flex flex-wrap gap-3 mt-5"><button class="campus-btn primary" type="submit">Filtrar actividad</button><a class="campus-btn" href="{% url 'registro_actividad' %}">Limpiar filtros</a></div>
+  </form>
+  <section class="campus-card overflow-hidden">
+    <header class="campus-card-pad"><h2 class="text-lg font-semibold">{{ pagina.paginator.count }} registro{{ pagina.paginator.count|pluralize:'s' }}</h2><p class="text-sm text-slate-600 mt-2">Los campos indican qué se envió en la operación. No se guardan contraseñas ni valores de los campos personales.</p></header>
+    <div class="campus-table-wrap"><table>
+      <thead><tr><th>Fecha y hora</th><th>Usuario</th><th>Acción</th><th>Registro</th><th>Resultado</th></tr></thead>
+      <tbody>{% for r in pagina %}<tr>
+        <td>{{ r.registrado_en|date:'d/m/Y H:i:s' }}</td><td>{{ r.usuario_nombre }}{% if not r.usuario_id %}<small class="block text-slate-500">Sin cuenta vinculada</small>{% endif %}</td>
+        <td>{{ r.accion }}{% if r.campos %}<details class="mt-2"><summary class="text-xs text-slate-600 cursor-pointer">Campos enviados</summary><p class="text-xs mt-2">{{ r.campos|join:', ' }}</p></details>{% endif %}</td>
+        <td>{{ r.objeto|default:'—' }}</td><td><span class="campus-badge {% if r.resultado == 'Completado' %}success{% else %}warn{% endif %}">{{ r.resultado }}</span></td>
+      </tr>{% empty %}<tr><td colspan="5" class="text-center">No hay actividad que coincida con los filtros.</td></tr>{% endfor %}</tbody>
+    </table></div>
+  </section>
+  {% if pagina.has_other_pages %}<nav class="flex flex-wrap gap-3 items-center mt-5" aria-label="Páginas de actividad">
+    {% if pagina.has_previous %}<a class="campus-btn" href="?{{ filtros }}&amp;page={{ pagina.previous_page_number }}">Anterior</a>{% endif %}
+    <span>Página {{ pagina.number }} de {{ pagina.paginator.num_pages }}</span>
+    {% if pagina.has_next %}<a class="campus-btn" href="?{{ filtros }}&amp;page={{ pagina.next_page_number }}">Siguiente</a>{% endif %}
+  </nav>{% endif %}
+</section>
+{% endblock %}

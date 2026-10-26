@@ -62,6 +62,7 @@
       </div>
     </div>
 
+    <p id="aviso-retiro" class="campus-message warning mb-5 hidden" role="status">Este estudiante está retirado. <a id="enlace-historial" class="underline font-semibold">Abre su Historial escolar para registrar la reincorporación.</a></p>
     <!-- Formulario -->
     <form id="newStudentForm" method="POST" action="{% url 'guardar_estudiante' %}" class="space-y-10" data-campus-wizard="">
       {% csrf_token %}
@@ -163,7 +164,7 @@
             <select id="estado" name="estado"
               class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500">
               <option value="">Seleccionar Estado</option>
-              <option value="Activo">Activo</option><option value="Inactivo">Inactivo</option><option value="Egresado">Egresado</option>
+              <option value="Activo">Activo</option><option value="Inactivo">Inactivo</option><option value="Retirado">Retirado</option><option value="Egresado">Egresado</option>
             </select>
           </div>
           <div>
@@ -636,6 +637,9 @@
         imprimirBtn.setAttribute('data-rut', s.rut);
       }
 
+      const avisoRetiro = document.getElementById('aviso-retiro');
+      avisoRetiro.classList.toggle('hidden', s.estado_actual !== 'Retirado');
+      document.getElementById('enlace-historial').href = '/detalles-estudiante/' + s.id + '/?anio=' + (s.anio_mostrado || anioActual) + '#historial-escolar';
       document.getElementById('newStudentForm').dispatchEvent(new Event('campus:loaded'));
       showMessage(`Estudiante cargado para el año ${s.anio_mostrado || anioActual || ''}`, "success");
     }).catch(err => {

@@ -17,6 +17,8 @@ def registro_alumno_view(request):
     if not apoderado:
         return redirect('registro_apoderado')
 
+    request.audit_nombre = f'Apoderado: {apoderado.nombre} {apoderado.apellido}'
+
     # 1) Años visibles
     anios_visibles = list(
         AcademicYear.objects.filter(is_visible=True)
@@ -115,6 +117,9 @@ def registro_alumno_view(request):
     de_donde_viene = (d.get('de_donde_viene') or '').strip()
     sistema_salud = (d.get('sistema_salud') or '').strip()
 
+    existente = estudiante_por_rut(_norm_rut(rut)) if rut else None
+    if existente and existente.estado == 'Retirado':
+        errores.append('El estudiante está retirado. Solicita a la administración que registre su reincorporación.')
     if not rut:
         errores.append("El RUT del estudiante es obligatorio.")
     if not nombre_completo:
@@ -270,6 +275,7 @@ def registro_alumno_view(request):
             defaults=MatriculaAnual.defaults_desde_estudiante(est)
         )
 
+        request.audit_objeto = f'Estudiante #{est.pk} · {curso.anio}'
         if is_ajax:
             keep_year = (submit_action == 'save_new')
             return JsonResponse({
@@ -338,6 +344,8 @@ def registrar_apoderado(request):
         if not form.is_valid():
             return render(request, 'app/registro_apoderado.html', {'form': form}, status=400)
         apoderado = form.save()
+        request.audit_nombre = f'Apoderado: {apoderado.nombre} {apoderado.apellido}'
+        request.audit_objeto = f'Apoderado #{apoderado.pk}'
 
         # ✅ Guardar el ID del apoderado en la sesión
         request.session.cycle_key()

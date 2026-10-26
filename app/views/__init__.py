@@ -89,3 +89,5 @@ from .datos import (
     import_datos_panel,
     importar_sql_dump,
 )
+
+from .historial import movimiento_estudiante, registro_actividad

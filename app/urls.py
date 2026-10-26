@@ -69,6 +69,9 @@ urlpatterns = [
     path('imprimir-estudiante/<str:rut>/', imprimir_estudiante, name='imprimir_estudiante'),
     path('imprimir_estudiantes/<int:curso_id>/', imprimir_estudiantes_por_curso, name='imprimir_estudiantes_por_curso'),
 
+    path('estudiante/<int:estudiante_id>/movimiento/', views.movimiento_estudiante, name='movimiento_estudiante'),
+    path('config/actividad/', views.registro_actividad, name='registro_actividad'),
+
     # Documentos
     path('descargar-documento/<int:documento_id>/', descargar_documento, name='descargar_documento'),
 

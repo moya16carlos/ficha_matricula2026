@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block title %}{{ titulo }} · Matrículas LSP{% endblock %}
+{% block content %}
+<section>
+  <header class="campus-page-heading"><div><div class="campus-eyebrow">Estudiantes / Historial escolar</div><h1>{{ titulo }}</h1><p>{{ estudiante.nombre_completo }} · {{ estudiante.rut }}</p></div></header>
+  <div class="campus-card campus-card-pad max-w-3xl mx-auto">
+    <p class="mb-5 text-sm text-slate-600">{% if tipo == 'RETIRO' %}El retiro corresponde a la matrícula {{ anio }}. Se conservarán los antecedentes del estudiante y la persona que registra el movimiento.{% else %}Selecciona el curso del año de regreso. El estudiante volverá a estar Activo y sus retiros anteriores se conservarán.{% if pendiente %} Último retiro: {{ pendiente.fecha|date:'d/m/Y' }}.{% endif %}{% endif %}</p>
+    <form method="post" class="space-y-5">
+      {% csrf_token %}
+      {% if form.non_field_errors %}<div class="campus-message error" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+      {% for field in form %}
+        {% if field.is_hidden %}{{ field }}{% if field.errors %}<div role="alert">{{ field.errors }}</div>{% endif %}
+        {% else %}<div><label class="block mb-2" for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="text-red-600">*</span>{% endif %}</label>{{ field }}{% if field.errors %}<div class="text-red-600 text-sm" role="alert">{{ field.errors }}</div>{% endif %}</div>{% endif %}
+      {% endfor %}
+      <div class="flex flex-wrap gap-3 justify-end border-t border-slate-200 pt-5">
+        <a class="campus-btn" href="{% url 'detalles_estudiante' estudiante.pk %}?anio={{ anio }}#historial-escolar">Cancelar</a>
+        <button type="submit" class="campus-btn primary">{{ titulo }}</button>
+      </div>
+    </form>
+  </div>
+</section>
+{% endblock %}

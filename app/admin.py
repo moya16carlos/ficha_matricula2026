@@ -77,3 +77,29 @@ class AcademicYearAdmin(admin.ModelAdmin):
     list_display = ('anio', 'is_visible', 'is_default')
     list_editable = ('is_visible', 'is_default')
     search_fields = ('anio',)
+
+from .models import MovimientoEstudiante, RegistroActividad
+
+
+class HistorialSoloLecturaAdmin(admin.ModelAdmin):
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(RegistroActividad)
+class RegistroActividadAdmin(HistorialSoloLecturaAdmin):
+    list_display = ('registrado_en', 'usuario_nombre', 'accion', 'objeto', 'resultado')
+    list_filter = ('accion', 'resultado')
+    search_fields = ('usuario_nombre', 'objeto')
+
+
+@admin.register(MovimientoEstudiante)
+class MovimientoEstudianteAdmin(HistorialSoloLecturaAdmin):
+    list_display = ('estudiante', 'tipo', 'fecha', 'curso_descripcion', 'usuario_nombre')
+    list_filter = ('tipo',)

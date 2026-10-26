@@ -32,8 +32,8 @@
               <span class="font-mono text-slate-600">{{ estudiante.rut }}</span>
               {% with estado_view=ma.estado|default:estudiante.estado %}
                 {% if estado_view %}
-                  <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 ring-1 ring-emerald-200 px-2.5 py-0.5 font-semibold text-emerald-700">
-                    <span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>{{ estado_view }}
+                  <span class="inline-flex items-center gap-1.5 rounded-full {% if estado_view == 'Retirado' %}bg-amber-50 text-amber-700{% else %}bg-emerald-50 text-emerald-700{% endif %} ring-1 ring-slate-200 px-2.5 py-0.5 font-semibold">
+                    <span class="h-1.5 w-1.5 rounded-full {% if estado_view == 'Retirado' %}bg-amber-400{% else %}bg-emerald-400{% endif %}"></span>{{ estado_view }}
                   </span>
                 {% endif %}
               {% endwith %}
@@ -53,6 +53,7 @@
       </div>
     </div>
 
+    {% if retiro_pendiente %}<div class="campus-message warning mb-5"><strong>Retiro registrado el {{ retiro_pendiente.fecha|date:'d/m/Y' }}.</strong> Para volver a matricularlo, registra su reincorporación desde <a class="underline" href="#historial-escolar">Historial escolar</a>.</div>{% endif %}
     <!-- Tarjeta principal -->
     <div class="rounded-3xl bg-white shadow-2xl ring-1 ring-slate-200">
       <!-- Barra de acciones (fija mientras haces scroll) -->
@@ -368,6 +369,7 @@
             </div>
           </div>
 
+          {% include 'app/components/historial_escolar.html' %}
           {% if user.rol == 'ADMINISTRADOR' or user.rol == 'DIRECTIVO' %}
           <div id="seccion-rut" class="scroll-mt-24 campus-detail-panel" data-campus-panel="rut">
             <h3 class="text-base font-semibold text-slate-700 mb-3">VII. RUT provisional → definitivo (estudiante extranjero)</h3>

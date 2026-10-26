@@ -1,7 +1,8 @@
 # app/models.py
+import re
 
 from django.conf import settings
-from django.db import models
+from django.db import models, transaction
 from django.core.exceptions import ValidationError
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
@@ -172,6 +173,29 @@ class Curso(models.Model):
     def __str__(self):
         return f"{self.nivel} {self.letra or ''} ({self.anio})".strip()
 
+def validar_estado_escolar(obj, bloquear=False):
+    if getattr(obj, '_registrando_movimiento', False):
+        return
+    if not obj.pk and hasattr(obj, 'rut'):
+        rut = re.sub(r'[.\-\s]', '', obj.rut).upper()
+        cuerpo, dv = rut[:-1], rut[-1:]
+        cuerpo_formateado = re.sub(r'\B(?=(\d{3})+(?!\d))', '.', cuerpo)
+        variantes = {rut, f'{cuerpo}-{dv}', f'{cuerpo_formateado}-{dv}'}
+        if type(obj).objects.filter(rut__in=variantes).exists():
+            raise ValidationError('Ya existe una ficha con ese RUT. Usa esa ficha y registra su reincorporación si está retirado.')
+    qs = type(obj).objects
+    if bloquear:
+        qs = qs.select_for_update()
+    anterior = qs.filter(pk=obj.pk).values('estado', 'curso_id').first() if obj.pk else None
+    estado_anterior = anterior['estado'] if anterior else None
+    if (obj.estado == 'Retirado') != (estado_anterior == 'Retirado'):
+        raise ValidationError('Registra el retiro o la reincorporación desde el Historial escolar de la ficha.')
+    if estado_anterior == 'Retirado' and obj.curso_id != anterior['curso_id']:
+        raise ValidationError('Para cambiar el curso de un estudiante retirado, registra su reincorporación.')
+    if not obj.pk and hasattr(obj, 'estudiante_id') and obj.estudiante.estado == 'Retirado':
+        raise ValidationError('El estudiante está retirado. Registra su reincorporación antes de matricularlo.')
+
+
 class Estudiante(models.Model):
     # Información del Estudiante
     rut = models.CharField(max_length=13, unique=True)  # RUT del estudiante (sin guiones ni puntos)
@@ -194,6 +218,7 @@ class Estudiante(models.Model):
     estado = models.CharField(max_length=20, choices=[
         ('Activo', 'Activo'),
         ('Inactivo', 'Inactivo'),
+        ('Retirado', 'Retirado'),
         ('Egresado', 'Egresado')
     ], default='Activo')  # Estado del estudiante
     de_donde_viene = models.CharField(max_length=100, blank=True, null=True)  # Colegio o institución de procedencia
@@ -292,6 +317,15 @@ class Estudiante(models.Model):
         help_text="Usuario que realizó la última actualización de RUT."
     )
 
+    def clean(self):
+        super().clean()
+        validar_estado_escolar(self)
+
+    def save(self, *args, **kwargs):
+        with transaction.atomic():
+            validar_estado_escolar(self, bloquear=True)
+            return super().save(*args, **kwargs)
+
     def __str__(self):
         return f"{self.nombre_completo} ({self.rut})"
 
@@ -375,7 +409,7 @@ class MatriculaAnual(models.Model):
     # (los campos coinciden con tu Estudiante para permitir seed/clone)
     estado = models.CharField(
         max_length=20,
-        choices=[('Activo', 'Activo'), ('Inactivo', 'Inactivo'), ('Egresado', 'Egresado')],
+        choices=[('Activo', 'Activo'), ('Inactivo', 'Inactivo'), ('Retirado', 'Retirado'), ('Egresado', 'Egresado')],
         default='Activo'
     )
     fecha_matricula = models.DateField(null=True, blank=True)
@@ -455,12 +489,15 @@ class MatriculaAnual(models.Model):
 
     def clean(self):
         super().clean()
+        validar_estado_escolar(self)
         if self.curso_id and self.curso.anio != self.anio:
             raise ValidationError({'curso': 'El curso debe pertenecer al año de la matrícula.'})
 
     def save(self, *args, **kwargs):
-        self.clean()
-        return super().save(*args, **kwargs)
+        with transaction.atomic():
+            validar_estado_escolar(self, bloquear=True)
+            self.clean()
+            return super().save(*args, **kwargs)
 
     class Meta:
         verbose_name = "Matrícula anual"
@@ -495,3 +532,44 @@ class AcademicYear(models.Model):
 
     def __str__(self):
         return f"{self.anio} ({'visible' if self.is_visible else 'oculto'})"
+
+
+class MovimientoEstudiante(models.Model):
+    TIPOS = [('RETIRO', 'Retiro'), ('REINCORPORACION', 'Reincorporación')]
+    estudiante = models.ForeignKey(Estudiante, on_delete=models.PROTECT, related_name='movimientos')
+    matricula = models.ForeignKey(MatriculaAnual, on_delete=models.PROTECT, related_name='movimientos')
+    tipo = models.CharField(max_length=20, choices=TIPOS)
+    fecha = models.DateField()
+    motivo = models.CharField(max_length=500)
+    solicitante = models.CharField(max_length=150, blank=True)
+    observaciones = models.TextField(blank=True)
+    curso_descripcion = models.CharField(max_length=100)
+    datos = models.JSONField(default=dict)
+    retiro = models.OneToOneField('self', null=True, blank=True, on_delete=models.PROTECT,
+                                 related_name='reincorporacion')
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL)
+    usuario_nombre = models.CharField(max_length=150)
+    registrado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-fecha', '-id']
+
+    @property
+    def ficha_guardada(self):
+        campos = {f.name: f.verbose_name for f in Estudiante._meta.fields}
+        return [(str(campos.get(k, k)).capitalize(), 'Sí' if v is True else 'No' if v is False else v)
+                for k, v in self.datos.items() if v not in (None, '')]
+
+
+class RegistroActividad(models.Model):
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+    usuario_nombre = models.CharField(max_length=150)
+    accion = models.CharField(max_length=80, db_index=True)
+    objeto = models.CharField(max_length=150, blank=True)
+    resultado = models.CharField(max_length=20)
+    codigo_http = models.PositiveSmallIntegerField()
+    campos = models.JSONField(default=list)
+    registrado_en = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ['-registrado_en', '-id']

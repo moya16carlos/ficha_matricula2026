@@ -72,6 +72,12 @@
              class="border bg-gray-100 text-black rounded-lg w-full px-3 py-2
                     font-mono tracking-tight" placeholder="Nombre o RUT…">
     </div>
+    <div>
+      <label for="estado-filtro" class="block text-xs font-medium text-slate-500 mb-1">Estado</label>
+      <select id="estado-filtro" name="estado" class="w-full border border-slate-300">
+        <option value="">Todos los estados</option><option value="Activo" {% if estado_filtro == 'Activo' %}selected{% endif %}>Activos</option><option value="Retirado" {% if estado_filtro == 'Retirado' %}selected{% endif %}>Retirados</option><option value="Inactivo" {% if estado_filtro == 'Inactivo' %}selected{% endif %}>Inactivos</option><option value="Egresado" {% if estado_filtro == 'Egresado' %}selected{% endif %}>Egresados</option>
+      </select>
+    </div>
     <div class="flex items-end">
       <button type="submit"
               class="w-full rounded-lg bg-indigo-600 hover:bg-indigo-700 px-4 py-2 text-sm font-semibold

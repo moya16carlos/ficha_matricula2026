@@ -24,3 +24,5 @@
 @media(max-width:700px){.campus-detail-panel[data-campus-panel=estudiante] dl{grid-template-columns:1fr}}
 
 @media(max-height:800px){.campus-sidebar{padding-top:20px}.campus-sidebar .campus-help{display:none}.campus-sidebar-bottom{padding-top:10px}.campus-year{margin:20px 0 13px}.campus-nav{margin-bottom:9px}.campus-nav a{min-height:41px;padding:10px 12px}.campus-nav-caption{margin:8px 0 7px}}
+
+#historial-escolar{overflow-wrap:anywhere}

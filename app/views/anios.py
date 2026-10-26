@@ -9,13 +9,16 @@ CAMPOS_SEED = [
 
 @transaction.atomic
 def seed_matricula_from_estudiantes(anio: int, only_activos: bool = True, overwrite: bool = False) -> Dict[str, Any]:
-    qs = Estudiante.objects.select_related('curso')
+    qs = Estudiante.objects.select_related('curso').exclude(estado='Retirado')
     if only_activos:
         qs = qs.filter(estado='Activo')
 
     creados = actualizados = omitidos = 0
 
     for e in qs:
+        if MatriculaAnual.objects.filter(estudiante=e, anio=anio, estado='Retirado').exists():
+            omitidos += 1
+            continue
         curso_destino = map_curso_destino(
             e.curso, anio, False, True, NIVEL_POR_ASIGNAR, None,
         )
@@ -121,7 +124,7 @@ def clone_matriculas_anio(source_year, target_year, only_activos=False, promote_
     ensure_academic_year(source_year, True)
     ensure_academic_year(target_year, True)
 
-    qs_source = MatriculaAnual.objects.filter(anio=source_year)
+    qs_source = MatriculaAnual.objects.filter(anio=source_year).exclude(estado='Retirado').exclude(estudiante__estado='Retirado')
     if only_activos:
         qs_source = qs_source.filter(Q(estado='Activo') | Q(estado__isnull=True))
 
@@ -129,6 +132,9 @@ def clone_matriculas_anio(source_year, target_year, only_activos=False, promote_
 
     for ma in qs_source.select_related('estudiante', 'curso'):
         e = ma.estudiante
+        if MatriculaAnual.objects.filter(estudiante=e, anio=target_year, estado='Retirado').exists():
+            skipped += 1
+            continue
         if only_activos and e.estado != 'Activo':
             skipped += 1
             continue
@@ -206,7 +212,7 @@ def _rows_source_for_course(source_curso, only_activos: bool):
     # 1) Primero intentar desde MatriculaAnual (más fiable por año)
     ma_qs = (
         MatriculaAnual.objects
-        .filter(anio=source_curso.anio, curso=source_curso)
+        .filter(anio=source_curso.anio, curso=source_curso).exclude(estado='Retirado').exclude(estudiante__estado='Retirado')
         .select_related('estudiante')
     )
     if only_activos:
@@ -218,7 +224,7 @@ def _rows_source_for_course(source_curso, only_activos: bool):
         return
 
     # 2) Si no hay MatriculaAnual, caer a Estudiante del curso origen
-    e_qs = Estudiante.objects.filter(curso=source_curso).select_related('curso')
+    e_qs = Estudiante.objects.filter(curso=source_curso).exclude(estado='Retirado').select_related('curso')
     if only_activos:
         e_qs = e_qs.filter(estado='Activo')
 
@@ -253,6 +259,9 @@ def clone_curso_to_curso(
     creados = actualizados = omitidos = movidos_fk = 0
 
     for e, tipo, ma_src in _rows_source_for_course(source, only_activos):
+        if MatriculaAnual.objects.filter(estudiante=e, anio=target.anio, estado='Retirado').exists():
+            omitidos += 1
+            continue
         # Estado por defecto
         estado_final = (ma_src.estado if ma_src and getattr(ma_src, 'estado', None) else (e.estado or 'Activo'))
 

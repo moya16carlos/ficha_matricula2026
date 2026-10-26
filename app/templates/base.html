@@ -36,6 +36,7 @@
         <a href="{% url 'listar_usuarios' %}" {% if route == 'listar_usuarios' or route == 'perfil_usuario' or route == 'crear_usuario' or route == 'editar_usuario' %}aria-current="page"{% endif %}>{% include 'app/components/icon.html' with name='people' %}<span>Mi equipo</span></a>
         {% if user.is_superuser or user.rol == 'ADMINISTRADOR' %}
         <a href="{% url 'panel_config_documentos' %}" {% if route == 'panel_config_documentos' %}aria-current="page"{% endif %}>{% include 'app/components/icon.html' with name='settings' %}<span>Configuración</span></a>
+        <a href="{% url 'registro_actividad' %}" {% if route == 'registro_actividad' %}aria-current="page"{% endif %}>{% include 'app/components/icon.html' with name='file' %}<span>Registro de actividad</span></a>
         {% endif %}
       </nav>
       {% endif %}

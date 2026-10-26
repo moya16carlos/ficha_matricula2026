@@ -367,6 +367,7 @@ def imprimir_estudiante(request, rut):
     response['Expires'] = '0'
     response['X-Anio-Usado'] = str(anio_view)
     response['X-Anio-Forzado'] = str(anio_forzado) if anio_forzado else ''
+    request.audit_objeto = f'Estudiante #{estudiante.pk} · {anio_view}'
     response['X-TieneMatricula'] = '1' if ma else '0'
     return response
 

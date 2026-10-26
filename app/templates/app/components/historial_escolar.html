@@ -1,0 +1,21 @@
+<div id="historial-escolar" class="campus-detail-panel" data-campus-panel="historial">
+  <div class="campus-card-head"><div><h2>Historial escolar</h2><p class="text-sm text-slate-600">Retiros y reincorporaciones, con sus antecedentes originales.</p></div></div>
+  <div class="flex flex-wrap gap-3 mb-5">
+    {% if puede_retirar %}<a class="campus-btn" href="{% url 'movimiento_estudiante' estudiante.pk %}?tipo=RETIRO&amp;anio={{ anio_view }}">Registrar retiro</a>{% endif %}
+    {% if puede_reincorporar %}<a class="campus-btn primary" href="{% url 'movimiento_estudiante' estudiante.pk %}?tipo=REINCORPORACION&amp;anio={{ anio_view }}">Reincorporar estudiante</a>{% endif %}
+  </div>
+  {% for m in movimientos %}
+  <article class="campus-card campus-card-pad mb-5">
+    <header class="flex flex-wrap justify-between gap-3 mb-4"><h3 class="font-semibold">{{ m.get_tipo_display }} · {{ m.fecha|date:'d/m/Y' }}</h3><span class="campus-badge {% if m.tipo == 'RETIRO' %}warn{% else %}success{% endif %}">{{ m.curso_descripcion }}</span></header>
+    <dl class="grid md:grid-cols-2 gap-4 text-sm">
+      <div><dt class="text-slate-500">Motivo</dt><dd>{{ m.motivo }}</dd></div>
+      {% if m.solicitante %}<div><dt class="text-slate-500">Solicitado por</dt><dd>{{ m.solicitante }}</dd></div>{% endif %}
+      {% if m.observaciones %}<div><dt class="text-slate-500">Observaciones</dt><dd class="whitespace-pre-wrap">{{ m.observaciones }}</dd></div>{% endif %}
+      <div><dt class="text-slate-500">Registrado por</dt><dd>{{ m.usuario_nombre }} · {{ m.registrado_en|date:'d/m/Y H:i' }}</dd></div>
+    </dl>
+    <details class="mt-5 border-t border-slate-200 pt-4"><summary class="cursor-pointer font-semibold text-sm">Ver datos guardados en este movimiento</summary>
+      <dl class="grid md:grid-cols-2 gap-4 mt-4 text-sm">{% for etiqueta, valor in m.ficha_guardada %}<div><dt class="text-slate-500">{{ etiqueta }}</dt><dd class="break-words">{{ valor }}</dd></div>{% endfor %}</dl>
+    </details>
+  </article>
+  {% empty %}<p class="text-sm text-slate-600">Todavía no se han registrado retiros ni reincorporaciones. Los estados anteriores no tienen fechas de movimiento registradas.</p>{% endfor %}
+</div>

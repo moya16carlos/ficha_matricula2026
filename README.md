@@ -176,3 +176,25 @@ servidor exista antes de `docker compose up -d`.
 - `eliminar_usuario` exige rol ADMINISTRADOR (antes podía eliminar cualquier usuario logueado).
 - `editar_usuario` hashea la contraseña con `set_password` (antes quedaba texto plano).
 - `imprimir_estudiantes_por_curso` requiere sesión + rol permitido (antes era pública).
+
+## 6. Retiros, reincorporaciones y actividad
+
+- En la ficha, **Historial escolar** permite registrar retiros y reincorporaciones
+  con fecha, motivo, solicitante, observaciones y funcionario responsable. Cada
+  movimiento conserva una copia de la ficha. Un regreso en otro año crea su matrícula
+  y conserva el estado Retirado en el año anterior.
+- Las acciones exigen permiso de edición en los niveles de origen y destino.
+  Los formularios, importaciones y copias no pueden reactivar a un retirado sin
+  registrar su reincorporación. Los listados incluyen el filtro **Retirados**.
+- **Registro de actividad**, visible para administradores, guarda accesos, consultas
+  de fichas, guardados, movimientos, cambios administrativos, importaciones,
+  exportaciones e impresiones. Permite filtrar por usuario, acción y fechas.
+  Conserva el nombre del responsable aunque se elimine su cuenta. Guarda nombres
+  de campos enviados, no sus valores personales, contraseñas ni archivos.
+- Los registros comienzan al aplicar la migración `0033_retiros_y_actividad`;
+  no reconstruyen acciones anteriores. Las escrituras desde scripts externos o SQL
+  directo no pasan por el registro HTTP. El administrador de la base conserva
+  control sobre sus tablas; el portal no ofrece borrar o editar estos historiales.
+- Docker ejecuta `migrate` al iniciar. Para una instalación manual:
+  `python manage.py migrate` antes de arrancar la nueva versión. No se requiere
+  ninguna dependencia adicional.
