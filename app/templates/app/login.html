@@ -6,11 +6,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Iniciar Sesión · Intranet LSP</title>
   <link rel="stylesheet" href="{% static 'app/css/tailwind.css' %}">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <style>html,body{font-family:'Inter',ui-sans-serif,system-ui,sans-serif}</style>
+  <link rel="stylesheet" href="{% static 'app/css/campus.css' %}">
+
+  <script src="{% static 'app/js/campus.js' %}" defer></script>
 </head>
 
-<body class="bg-slate-200 text-slate-900 min-h-screen grid grid-cols-1 lg:grid-cols-5">
+<body class="campus campus-auth bg-slate-200 text-slate-900 min-h-screen grid grid-cols-1 lg:grid-cols-5">
 
   <!-- Panel marca (izquierda) -->
   <div class="lg:col-span-2 relative overflow-hidden bg-gradient-to-b from-indigo-700 via-indigo-800 to-slate-900 text-white flex flex-col justify-between p-10">
@@ -19,11 +20,11 @@
       <p class="font-bold leading-tight">Liceo Municipal<br>San Pedro</p>
     </div>
     <div class="relative">
-      <h1 class="text-3xl font-bold leading-tight">Sistema de<br>Matrículas</h1>
+      <h1 class="text-3xl font-bold leading-tight">Cada matrícula<br>es un nuevo<br>comienzo.</h1>
       <p class="mt-4 text-indigo-200 text-sm leading-relaxed max-w-xs">
         Fichas, matrículas por año y documentos en un solo lugar: encontrar a un estudiante toma segundos.
       </p>
-      <div class="mt-8 space-y-3 text-sm text-indigo-100">
+      <div class="campus-book-art" aria-hidden="true"><i></i><i></i><i></i></div><div class="mt-8 space-y-3 text-sm text-indigo-100">
         <div class="flex items-center gap-3"><span class="text-emerald-300">✔</span> Búsqueda instantánea por nombre o RUT</div>
         <div class="flex items-center gap-3"><span class="text-emerald-300">✔</span> Cambio de curso sin salir del listado</div>
         <div class="flex items-center gap-3"><span class="text-emerald-300">✔</span> Fichas PDF firmadas en un clic</div>

@@ -1,0 +1,18 @@
+{% load static %}
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{% block title %}Matrículas LSP{% endblock %}</title>
+  <link rel="icon" href="{% static 'app/img/logo.png' %}">
+  <link rel="stylesheet" href="{% static 'app/css/tailwind.css' %}">
+  <link rel="stylesheet" href="{% static 'app/css/campus.css' %}">
+  <script src="{% static 'app/js/campus.js' %}" defer></script>
+</head>
+<body class="campus campus-public">
+  <a class="campus-skip" href="#contenido">Saltar al contenido</a>
+  <header class="campus-public-header">{% include 'app/components/brand.html' %}<span class="campus-badge">Comunidad, educación y futuro</span></header>
+  <main id="contenido" class="campus-content">{% block content %}{% endblock %}</main>
+</body>
+</html>

@@ -2,6 +2,7 @@ import json
 import io
 from datetime import date
 from importlib import import_module
+from html.parser import HTMLParser
 from tempfile import NamedTemporaryFile
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -62,6 +63,96 @@ class RegresionesBase(TestCase):
         return self.client.post(reverse('import_datos_panel'), dict(
             archivo=upload, datasets=list(datasets), anio_destino=2026, **options,
         ))
+
+
+class CampusDisenoTests(RegresionesBase):
+    def test_pantallas_internas_comparten_el_diseno(self):
+        self.client.force_login(self.admin)
+        for name, args in (
+            ('home', []), ('listar_estudiantes', []), ('listar_estudiantes_anio', []),
+            ('listar_estudiantes_admin', []), ('detalles_estudiante', [self.est.pk]),
+            ('nuevo_estudiante', []), ('ficha_estudiante', []), ('listar_usuarios', []),
+            ('crear_usuario', []), ('perfil_usuario', [self.admin.pk]),
+            ('panel_config_documentos', []),
+        ):
+            with self.subTest(name=name):
+                response = self.client.get(reverse(name, args=args), {'anio': 2026})
+                self.assertContains(response, 'app/css/campus.css')
+                self.assertContains(response, 'app/js/campus.js')
+                self.assertContains(response, 'id="campus-navigation"')
+
+    def test_formularios_guiados_conservan_campos_y_obligatorios(self):
+        class Campos(HTMLParser):
+            def __init__(self):
+                super().__init__()
+                self.fields = {}
+
+            def handle_starttag(self, tag, attrs):
+                attrs = dict(attrs)
+                if tag in ('input', 'select', 'textarea') and attrs.get('name'):
+                    self.fields[attrs['name']] = attrs
+
+        ConfiguracionSistema.objects.create(pk=1, registro_apoderado_habilitado=True)
+        apoderado = Apoderado.objects.create(run='333333333', nombre='Familia', apellido='Test')
+        session = self.client.session
+        session['apoderado_id'] = apoderado.pk
+        session.save()
+        self.client.force_login(self.admin)
+        for name in ('nuevo_estudiante', 'ficha_estudiante', 'registro_alumno'):
+            with self.subTest(name=name):
+                response = self.client.get(reverse(name), {'anio': 2026})
+                self.assertContains(response, 'data-campus-wizard')
+                fields = Campos()
+                fields.feed(response.content.decode())
+                for field in ('rut', 'nombre_completo', 'fecha_nacimiento', 'sexo',
+                              'nacionalidad', 'domicilio', 'comuna', 'vive_con', 'fecha_matricula'):
+                    self.assertIn('required', fields.fields[field])
+                for field in ('csrfmiddlewaretoken', 'nombre_madre', 'nombre_padre',
+                              'nombre_apoderado', 'nombre_apoderado_suplente', 'acepta_fotografias'):
+                    self.assertIn(field, fields.fields)
+
+    def test_navegacion_respeta_permisos_y_detalle_no_ofrece_edicion_sin_permiso(self):
+        self.client.force_login(self.user)
+        response = self.client.get(reverse('home'))
+        self.assertNotContains(response, f'href="{reverse("nuevo_estudiante")}"')
+        self.assertNotContains(response, f'href="{reverse("panel_config_documentos")}"')
+        self.user.permisos_nivel.filter(nivel='BASICA').update(can_view=True, can_add=True)
+        self.assertContains(self.client.get(reverse('home')), f'href="{reverse("nuevo_estudiante")}"')
+        response = self.client.get(reverse('detalles_estudiante', args=[self.est.pk]))
+        self.assertNotContains(response, 'Editar ficha')
+        self.assertNotContains(response, 'Descargar PDF')
+        self.assertContains(response, self.est.nombre_completo)
+
+    def test_acciones_de_curso_exigen_el_nivel_correcto(self):
+        from app.templatetags.perm_extras import permiso_curso, puede_matricular
+        self.assertTrue(puede_matricular(self.admin))
+        self.assertFalse(puede_matricular(self.user))
+        self.user.permisos_nivel.filter(nivel='BASICA').update(can_print=True)
+        self.assertTrue(permiso_curso(self.user, self.kinder, 'print'))
+        self.assertFalse(permiso_curso(self.user, self.media, 'print'))
+        self.assertFalse(permiso_curso(self.user, None, 'print'))
+
+    def test_listado_y_directorio_escapan_texto_del_usuario(self):
+        self.client.force_login(self.admin)
+        self.est.nombre_completo = '<img src=x onerror=alert(1)>'
+        self.est.save(update_fields=['nombre_completo'])
+        self.user.nombre = '"><script>alert(1)</script>'
+        self.user.save(update_fields=['nombre'])
+        for name in ('listar_estudiantes', 'listar_usuarios'):
+            response = self.client.get(reverse(name), {'anio': 2026})
+            self.assertNotContains(response, '<script>alert(1)</script>')
+            self.assertNotContains(response, '<img src=x')
+            self.assertContains(response, '&lt;')
+
+    def test_paginas_publicas_y_acceso_denegado_conservan_el_diseno(self):
+        ConfiguracionSistema.objects.create(pk=1, registro_apoderado_habilitado=True)
+        for name in ('login', 'registro_apoderado', 'alumno_matriculado'):
+            self.assertContains(self.client.get(reverse(name)), 'app/css/campus.css')
+        self.client.force_login(self.user)
+        with self.settings(DEBUG=False):
+            response = self.client.get(reverse('detalles_estudiante', args=[self.est.pk]))
+        self.assertContains(response, 'app/css/campus.css', status_code=403)
+        self.assertNotContains(response, 'id="campus-navigation"', status_code=403)
 
 
 class PermisosRegresionTests(RegresionesBase):

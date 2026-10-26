@@ -54,6 +54,16 @@ DB_ENGINE=django.db.backends.sqlite3 .venv/bin/python manage.py migrate
 DB_ENGINE=django.db.backends.sqlite3 .venv/bin/python manage.py runserver
 ```
 
+La interfaz **Campus claro** comparte estilos en `app/static/app/css/campus.css`
+y navegación, pestañas y formularios por pasos en `app/static/app/js/campus.js`.
+Los formularios mantienen sus campos y validación del servidor; sin JavaScript
+se muestran completos. Al cambiar clases de Tailwind o su paleta, recompila el
+CSS antes de construir Docker:
+
+```bash
+npx tailwindcss -i tailwind.input.css -o app/static/app/css/tailwind.css --minify
+```
+
 Estructura principal:
 
 | Ruta | Rol |

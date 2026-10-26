@@ -14,8 +14,8 @@
     </nav>
     <div class="flex flex-wrap items-end justify-between gap-4 mb-6">
       <div>
-        <h1 class="text-2xl font-bold text-slate-900">Panel de Control</h1>
-        <p class="text-sm text-slate-500 mt-0.5">Todo lo que administra el sistema, organizado en 12 tarjetas.</p>
+        <h1 class="text-2xl font-bold text-slate-900">Un sistema a tu medida</h1>
+        <p class="text-sm text-slate-500 mt-0.5">Preferencias, documentos y accesos, organizados por tarea.</p>
       </div>
       <div class="flex flex-wrap items-center gap-2 text-xs font-medium">
         {% if firma_url %}
@@ -35,20 +35,11 @@
       </div>
     </div>
 
-    {% if messages %}
-      <div class="space-y-2 mb-6">
-        {% for message in messages %}
-          <div class="flex items-start gap-3 rounded-xl border border-emerald-300/50 bg-emerald-50 px-4 py-3 text-emerald-800 shadow-sm">
-            <svg class="mt-0.5 h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-width="2" d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10Z"/><path stroke-width="2" d="m9 12 2 2 4-4"/></svg>
-            <div class="text-sm leading-5">{{ message }}</div>
-          </div>
-        {% endfor %}
-      </div>
-    {% endif %}
+
 
     <!-- ===== Índice lateral + contenido ===== -->
     <div class="flex gap-6 items-start">
-      <aside class="hidden lg:block w-60 shrink-0 sticky top-[5.5rem]">
+      <aside class="hidden lg:block w-60 shrink-0 sticky top-[5.5rem] campus-legacy-index">
         <div class="rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm p-3">
           <p class="px-3 pt-1 pb-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">Ir a</p>
           <p class="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Contenido del PDF</p>
@@ -72,7 +63,7 @@
         </div>
       </aside>
 
-      <main class="flex-1 min-w-0 space-y-5">
+      <main class="flex-1 min-w-0 space-y-5" data-campus-settings="">
 
       <!-- 01 · Ficha de matrícula -->
       <section id="c01" class="form-card scroll-mt-24 rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm">
@@ -473,7 +464,6 @@
             Buscar
           </button>
         </form>
-      </div>
 
       <div class="overflow-x-auto rounded-xl border border-slate-200">
         <table class="min-w-full text-sm">

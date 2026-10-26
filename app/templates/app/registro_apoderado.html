@@ -6,11 +6,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Registro de Apoderado · Intranet LSP</title>
   <link rel="stylesheet" href="{% static 'app/css/tailwind.css' %}">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <style>html,body{font-family:'Inter',ui-sans-serif,system-ui,sans-serif}</style>
+  <link rel="stylesheet" href="{% static 'app/css/campus.css' %}">
+
+  <script src="{% static 'app/js/campus.js' %}" defer></script>
 </head>
 
-<body class="bg-slate-200 text-slate-900 min-h-screen grid grid-cols-1 lg:grid-cols-5">
+<body class="campus campus-auth bg-slate-200 text-slate-900 min-h-screen grid grid-cols-1 lg:grid-cols-5">
 
   <!-- Panel marca (izquierda) -->
   <div class="lg:col-span-2 relative overflow-hidden bg-gradient-to-b from-indigo-700 via-indigo-800 to-slate-900 text-white flex flex-col justify-between p-10">
@@ -21,12 +22,12 @@
     <div class="relative">
       <h1 class="text-3xl font-bold leading-tight">Registro de<br>Apoderado</h1>
       <p class="mt-4 text-indigo-200 text-sm leading-relaxed max-w-xs">
-        Solicita tu acceso a la intranet de matrículas. Dirección revisará y activará tu cuenta.
+        Crea tu registro para continuar con la inscripción de tu estudiante.
       </p>
-      <div class="mt-8 space-y-3 text-sm text-indigo-100">
+      <div class="campus-book-art" aria-hidden="true"><i></i><i></i><i></i></div><div class="mt-8 space-y-3 text-sm text-indigo-100">
         <div class="flex items-center gap-3"><span class="text-emerald-300">✔</span> Solo 5 minutos</div>
         <div class="flex items-center gap-3"><span class="text-emerald-300">✔</span> Tu RUT y correo deben ser reales</div>
-        <div class="flex items-center gap-3"><span class="text-emerald-300">✔</span> Después puedes iniciar sesión</div>
+        <div class="flex items-center gap-3"><span class="text-emerald-300">✔</span> Continúa con la inscripción de tu estudiante</div>
       </div>
     </div>
     <p class="text-indigo-300/70 text-xs">© 2026 · Intranet institucional</p>
@@ -107,7 +108,7 @@
           <button type="submit"
                   class="w-full rounded-xl bg-indigo-600 py-3 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700
                          focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition">
-            Crear usuario
+            Crear registro y continuar
           </button>
 
           <div class="text-center pt-1">

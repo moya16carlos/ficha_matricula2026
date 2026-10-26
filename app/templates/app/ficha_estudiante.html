@@ -63,7 +63,7 @@
     </div>
 
     <!-- Formulario -->
-    <form id="newStudentForm" method="POST" action="{% url 'guardar_estudiante' %}" class="space-y-10">
+    <form id="newStudentForm" method="POST" action="{% url 'guardar_estudiante' %}" class="space-y-10" data-campus-wizard="">
       {% csrf_token %}
 
       <!-- Datos del Estudiante -->
@@ -81,17 +81,17 @@
           <div>
             <label class="text-sm font-medium text-slate-700">RUT (sin puntos ni guion)</label>
             <input id="rut" name="rut" type="text"
-              class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500"/>
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500" required>
           </div>
           <div>
             <label class="text-sm font-medium text-slate-700">Nombre Completo</label>
             <input id="nombre_completo" name="nombre_completo" type="text"
-              class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500"/>
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500" required>
           </div>
           <div>
             <label class="text-sm font-medium text-slate-700">Curso</label>
             <select id="curso_id" name="curso_id"
-              class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500" required>
               <option value="">Seleccionar Curso</option>
               {% for c in cursos %}
                 <option value="{{ c.id }}" data-anio="{{ c.anio }}">
@@ -103,13 +103,13 @@
           <div>
             <label class="text-sm font-medium text-slate-700">Fecha de Nacimiento</label>
             <input id="fecha_nacimiento" name="fecha_nacimiento" type="date"
-              class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500"/>
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500" required>
           </div>
 
           <div>
             <label class="text-sm font-medium text-slate-700">Sexo</label>
             <select id="sexo" name="sexo"
-              class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500" required>
               <option value="">Seleccionar</option>
               <option value="Masculino">Masculino</option>
               <option value="Femenino">Femenino</option>
@@ -118,17 +118,17 @@
           <div>
             <label class="text-sm font-medium text-slate-700">Nacionalidad</label>
             <input id="nacionalidad" name="nacionalidad" type="text"
-              class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500"/>
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500" required>
           </div>
           <div>
             <label class="text-sm font-medium text-slate-700">Domicilio</label>
             <input id="domicilio" name="domicilio" type="text"
-              class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500"/>
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500" required>
           </div>
           <div>
             <label class="text-sm font-medium text-slate-700">Comuna</label>
             <input id="comuna" name="comuna" type="text"
-              class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500"/>
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500" required>
           </div>
 
           <div>
@@ -294,7 +294,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div>
             <label class="text-sm font-medium text-slate-700">Vive con</label>
-            <select id="vive_con" name="vive_con" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+            <select id="vive_con" name="vive_con" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500" required>
               <option value="Ambos Padres">Ambos Padres</option><option value="Padre">Padre</option>
               <option value="Madre">Madre</option><option value="Otros">Otros</option>
             </select>
@@ -367,7 +367,7 @@
           <div>
             <label class="text-sm font-medium text-slate-700">Fecha matrícula</label>
             <input id="fecha_matricula" name="fecha_matricula" type="date"
-              class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500" required>
           </div>
         </div>
       </div>
@@ -636,6 +636,7 @@
         imprimirBtn.setAttribute('data-rut', s.rut);
       }
 
+      document.getElementById('newStudentForm').dispatchEvent(new Event('campus:loaded'));
       showMessage(`Estudiante cargado para el año ${s.anio_mostrado || anioActual || ''}`, "success");
     }).catch(err => {
       console.error(err);

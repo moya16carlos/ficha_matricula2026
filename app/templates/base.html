@@ -1,131 +1,82 @@
-<!-- templates/base.html -->
-{% load static %}
-<!DOCTYPE html>
+{% load static perm_extras %}
+{% puede_matricular user as puede_agregar %}
+{% now "Y" as calendario %}
+<!doctype html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="csrf-token" content="{{ csrf_token }}">
-  <title>{% block title %}Liceo Municipal San Pedro{% endblock %}</title>
-
-  <!-- Tailwind (CDN JIT; el tailwind.css compilado viejo tenía un body con gradiente y img redondas → eliminado) -->
+  <title>{% block title %}Matrículas LSP{% endblock %}</title>
+  <link rel="icon" href="{% static 'app/img/logo.png' %}">
   <link rel="stylesheet" href="{% static 'app/css/tailwind.css' %}">
-
-  <!-- Tipografía opcional (Inter) -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <style>
-    html, body { font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"; }
-    /* Mostrar el dropdown al pasar el mouse por el contenedor .group */
-    .group:hover .dropdown-content { display: block !important; }
-    .dropdown-content { display: none; }
-  </style>
+  <link rel="stylesheet" href="{% static 'app/css/campus.css' %}">
+  <script src="{% static 'app/js/campus.js' %}" defer></script>
 </head>
-
-<body class="bg-slate-200 text-slate-900 flex flex-col min-h-screen">
-
-  <!-- Header institucional (claro) -->
-  <header class="sticky top-0 z-40 bg-white border-b border-slate-200">
-    <div class="max-w-7xl mx-auto px-6 h-16 flex items-center gap-5">
-      <!-- Logo + título -->
-      <div class="flex items-center gap-3 shrink-0">
-        <img src="{% static 'app/img/logo.png' %}" alt="Logo Liceo" class="w-9 h-9 rounded-xl ring-1 ring-slate-200" />
-        <div class="leading-none">
-          <a href="{% url 'home' %}" class="font-bold text-slate-900 text-[15px] hover:text-indigo-700">Liceo Municipal San Pedro</a>
-          <p class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold mt-0.5">Intranet matrículas</p>
-        </div>
-      </div>
-
-      <!-- Buscador global (nombre o RUT) -->
-      {% if user.is_authenticated %}
-      <div class="flex-1 max-w-md min-w-[220px] relative">
-        <div class="flex items-center gap-2 rounded-xl bg-slate-100 ring-1 ring-transparent px-3 py-2
-                    hover:ring-slate-300 focus-within:bg-white focus-within:ring-2 focus-within:ring-indigo-500 transition">
-          <svg class="h-4 w-4 shrink-0 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-width="2" d="m21 21-4.3-4.3M11 19a8 8 0 1 1 0-16 8 8 0 0 1 0 16Z"/></svg>
-          <input id="busqueda-global" type="text" autocomplete="off"
-                 class="bg-transparent outline-none text-sm text-slate-800 placeholder:text-slate-400 w-full"
-                 placeholder="Busca por nombre o RUT…">
-        </div>
-        <div id="busqueda-global-resultados"
-             class="hidden absolute left-0 right-0 mt-2 bg-white rounded-xl shadow-2xl ring-1 ring-slate-200 overflow-hidden text-slate-800 z-50"></div>
-      </div>
-      {% endif %}
-
-      {% if user.is_authenticated %}
-      <!-- Navegación -->
-      <nav class="flex items-center gap-5 text-sm font-medium text-slate-600">
-        <a href="{% url 'home' %}" class="hover:text-slate-900 transition">Inicio</a>
-        <a href="{% url 'ficha_estudiante' %}" class="hover:text-slate-900 transition">Estudiantes</a>
-        <a href="{% url 'nuevo_estudiante' %}" class="hover:text-slate-900 transition">Nuevo estudiante</a>
-        <a href="{% url 'listar_estudiantes' %}" class="hover:text-slate-900 transition">Listar estudiantes</a>
-
-        {% if user.is_staff or user.rol == 'ADMINISTRADOR' %}
-        <!-- Dropdown Funciones -->
-        <div class="relative group">
-          <button class="inline-flex items-center gap-2 hover:text-slate-900 transition">
-            Funciones
-            <svg class="h-4 w-4 opacity-60" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd"/>
-            </svg>
-          </button>
-
-          <div class="dropdown-content absolute right-0 mt-2 w-56 rounded-xl border border-slate-200 bg-white shadow-xl ring-1 ring-black/5">
-            <div class="py-1">
-              <a href="{% url 'crear_usuario' %}" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Crear Usuario</a>
-              <a href="{% url 'listar_usuarios' %}" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Listar usuarios</a>
-              <a href="{% url 'listar_estudiantes' %}" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Lista Estudiantes</a>
-              <a href="{% url 'panel_config_documentos' %}" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Panel de Control</a>
-            </div>
-          </div>
-        </div>
+<body class="campus {% if not user.is_authenticated %}campus-public{% endif %}" data-page="{{ request.resolver_match.url_name }}">
+  <a class="campus-skip" href="#contenido">Saltar al contenido</a>
+  {% if user.is_authenticated %}
+  {% with route=request.resolver_match.url_name %}
+  <div class="campus-shell">
+    <button type="button" class="campus-menu-scrim" data-campus-close hidden aria-label="Cerrar navegación"></button>
+    <aside class="campus-sidebar" id="campus-navigation" aria-label="Navegación del establecimiento">
+      {% include 'app/components/brand.html' %}
+      <div class="campus-year"><span>Año académico</span><strong>{% firstof anio anio_view anio_actual anio_sel calendario %}</strong></div>
+      <p class="campus-nav-caption">Principal</p>
+      <nav class="campus-nav" aria-label="Navegación principal">
+        <a href="{% url 'home' %}" {% if route == 'home' %}aria-current="page"{% endif %}>{% include 'app/components/icon.html' with name='home' %}<span>Inicio</span></a>
+        <a href="{% url 'listar_estudiantes' %}" {% if route == 'listar_estudiantes' or route == 'detalles_estudiante' or route == 'ficha_estudiante' %}aria-current="page"{% endif %}>{% include 'app/components/icon.html' with name='people' %}<span>Estudiantes</span></a>
+        <a href="{% url 'listar_estudiantes_anio' %}" {% if route == 'listar_estudiantes_anio' or route == 'listar_estudiantes_anio_var' %}aria-current="page"{% endif %}>{% include 'app/components/icon.html' with name='calendar' %}<span>Matrículas por año</span></a>
+        {% if puede_agregar %}<a href="{% url 'nuevo_estudiante' %}" {% if route == 'nuevo_estudiante' %}aria-current="page"{% endif %}>{% include 'app/components/icon.html' with name='plus' %}<span>Nueva matrícula</span></a>{% endif %}
+      </nav>
+      {% if user.is_superuser or user.rol == 'ADMINISTRADOR' or user.rol == 'DIRECTIVO' %}
+      <p class="campus-nav-caption">Administración</p>
+      <nav class="campus-nav" aria-label="Administración">
+        <a href="{% url 'listar_estudiantes_admin' %}" {% if route == 'listar_estudiantes_admin' %}aria-current="page"{% endif %}>{% include 'app/components/icon.html' with name='book' %}<span>Cursos y niveles</span></a>
+        <a href="{% url 'listar_usuarios' %}" {% if route == 'listar_usuarios' or route == 'perfil_usuario' or route == 'crear_usuario' or route == 'editar_usuario' %}aria-current="page"{% endif %}>{% include 'app/components/icon.html' with name='people' %}<span>Mi equipo</span></a>
+        {% if user.is_superuser or user.rol == 'ADMINISTRADOR' %}
+        <a href="{% url 'panel_config_documentos' %}" {% if route == 'panel_config_documentos' %}aria-current="page"{% endif %}>{% include 'app/components/icon.html' with name='settings' %}<span>Configuración</span></a>
         {% endif %}
-
-        <!-- Usuario + cerrar sesión -->
-        <div class="hidden md:flex items-center gap-2 rounded-full ring-1 ring-slate-200 bg-white py-1 pl-1 pr-3">
-          <span class="h-7 w-7 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center justify-center">
-            {{ user.nombre|default:user.get_username|slice:":1"|upper }}
-          </span>
-          <span class="text-xs text-slate-600 leading-tight">
-            {{ user.nombre|default:user.get_username }}
-            {% if user.rol %}<b class="text-slate-800">{{ user.rol|title }}</b>{% endif %}
-          </span>
-        </div>
-        <a href="{% url 'logout' %}"
-           class="rounded-xl px-2.5 py-2 text-lg leading-none text-slate-400 hover:bg-red-50 hover:text-red-600 transition"
-           title="Cerrar sesión">⏻</a>
       </nav>
       {% endif %}
+      <div class="campus-sidebar-bottom">
+        <div class="campus-help"><strong>Un espacio para tu equipo.</strong><p>Encuentra una ficha, organiza el año y acompaña cada matrícula.</p></div>
+        <div class="campus-user"><span class="campus-avatar">{{ user.nombre|slice:':1'|upper }}{{ user.apellido|slice:':1'|upper }}</span><span><strong>{{ user.nombre }} {{ user.apellido }}</strong><small>{{ user.get_rol_display }}</small></span></div>
+        <a class="campus-logout" href="{% url 'logout' %}">{% include 'app/components/icon.html' with name='logout' %}Cerrar sesión</a>
+      </div>
+    </aside>
+    <div class="campus-workspace">
+      <header class="campus-topbar">
+        <button class="campus-icon-button campus-menu-button" type="button" data-campus-menu aria-controls="campus-navigation" aria-expanded="false" aria-label="Abrir navegación">{% include 'app/components/icon.html' with name='menu' %}</button>
+        <div class="campus-crumb">Espacio de trabajo <span>/</span> <strong class="campus-current-page">Matrículas LSP</strong></div>
+        <div class="campus-search">
+          <label class="campus-search-field" for="busqueda-global">{% include 'app/components/icon.html' with name='search' %}<input id="busqueda-global" type="search" autocomplete="off" placeholder="Buscar estudiante por nombre o RUT…" aria-label="Buscar estudiante por nombre o RUT" aria-controls="busqueda-global-resultados"><kbd>↵</kbd></label>
+          <div id="busqueda-global-resultados" class="hidden campus-search-results" aria-live="polite"></div>
+        </div>
+        {% if user.is_superuser or user.rol == 'ADMINISTRADOR' %}
+        <a class="campus-avatar" href="{% url 'perfil_usuario' user.pk %}" aria-label="Mi perfil">{{ user.nombre|slice:':1'|upper }}{{ user.apellido|slice:':1'|upper }}</a>
+        {% else %}<span class="campus-avatar" title="{{ user.nombre }} {{ user.apellido }}">{{ user.nombre|slice:':1'|upper }}{{ user.apellido|slice:':1'|upper }}</span>{% endif %}
+      </header>
+  {% endwith %}
+  {% else %}
+  <header class="campus-public-header">{% include 'app/components/brand.html' %}<span class="campus-badge">Registro para familias</span></header>
+  {% endif %}
+      <main class="campus-content" id="contenido">
+        {% if messages %}<div class="campus-messages" aria-live="polite">{% for message in messages %}<div class="campus-message {{ message.tags }}">{{ message }}</div>{% endfor %}</div>{% endif %}
+        {% block content %}{% endblock %}
+      </main>
+      <footer class="campus-footer">Liceo Municipal San Pedro <span>Comunidad, educación y futuro · {% now 'Y' %}</span></footer>
+  {% if user.is_authenticated %}
     </div>
-  </header>
-
-  <!-- Contenido -->
-  <main class="flex-1 w-full">
-    {% block content %}{% endblock %}
-  </main>
-
-  <!-- Footer -->
-  <footer class="mt-auto border-t border-slate-200 bg-white">
-    <div class="max-w-7xl mx-auto px-6 py-6 text-center text-sm text-slate-500">
-      Liceo Municipal San Pedro · Intranet de matrículas · © 2026
-    </div>
-  </footer>
-
-  <!-- (Opcional) Cerrar dropdown al click fuera en dispositivos táctiles -->
-  <script>
-    document.addEventListener('click', (e) => {
-      const group = e.target.closest('.group');
-      const anyOpen = document.querySelectorAll('.dropdown-content');
-      anyOpen.forEach(menu => {
-        if (!group || !group.contains(menu)) menu.style.display = 'none';
-      });
-      if (group) {
-        const menu = group.querySelector('.dropdown-content');
-        if (menu) menu.style.display = 'block';
-      }
-    });
-  </script>
-
+  </div>
+  <nav class="campus-mobile-nav" aria-label="Navegación móvil">
+    <a href="{% url 'home' %}">{% include 'app/components/icon.html' with name='home' %}<span>Inicio</span></a>
+    <a href="{% url 'listar_estudiantes' %}">{% include 'app/components/icon.html' with name='people' %}<span>Estudiantes</span></a>
+    {% if puede_agregar %}<a href="{% url 'nuevo_estudiante' %}">{% include 'app/components/icon.html' with name='plus' %}<span>Matricular</span></a>{% endif %}
+    <a href="{% url 'listar_estudiantes_anio' %}">{% include 'app/components/icon.html' with name='calendar' %}<span>Matrículas</span></a>
+    <button type="button" data-campus-menu aria-controls="campus-navigation" aria-expanded="false">{% include 'app/components/icon.html' with name='menu' %}<span>Menú</span></button>
+  </nav>
+  {% endif %}
   <!-- Buscador global: busca estudiantes y abre su ficha -->
   <script>
     (function () {

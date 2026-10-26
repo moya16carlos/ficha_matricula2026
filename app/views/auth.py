@@ -40,6 +40,7 @@ def home_view(request):
     ctx = {
         'anio_actual': anio_actual,
         'n_estudiantes': estudiantes.count(),
+        'ultimas_fichas': estudiantes.select_related('curso').order_by('-id')[:4],
         'n_matriculas_anio': MatriculaAnual.objects.filter(anio=anio_actual).filter(
             filtro_q_por_niveles_permitidos(request.user, 'curso__nivel')
         ).count(),

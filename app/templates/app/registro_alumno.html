@@ -38,16 +38,10 @@
     </header>
 
     <!-- Mensajes Django -->
-    {% if messages %}
-    <div class="px-8 pt-6">
-      {% for message in messages %}
-        <div class="mb-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow">{{ message }}</div>
-      {% endfor %}
-    </div>
-    {% endif %}
+
 
     <!-- Formulario -->
-    <form id="newStudentForm" method="POST" action="{% url 'registro_alumno' %}" class="px-8 pb-10 pt-6 space-y-10">
+    <form id="newStudentForm" method="POST" action="{% url 'registro_alumno' %}" class="px-8 pb-10 pt-6 space-y-10" data-campus-wizard="">
       {% csrf_token %}
       <!-- Mantener el año al enviar -->
       <input type="hidden" name="anio_filtro" value="{{ anio_sel }}"/>
@@ -103,19 +97,19 @@
           <div>
             <label class="block text-sm font-medium text-slate-700">Nacionalidad</label>
             <input id="nacionalidad" name="nacionalidad" type="text"
-                   class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900">
+                   class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900" required>
           </div>
 
           <div>
             <label class="block text-sm font-medium text-slate-700">Domicilio</label>
             <input id="domicilio" name="domicilio" type="text"
-                   class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900">
+                   class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900" required>
           </div>
 
           <div>
             <label class="block text-sm font-medium text-slate-700">Comuna</label>
             <input id="comuna" name="comuna" type="text"
-                   class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900">
+                   class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900" required>
           </div>
 
           <div>
@@ -299,7 +293,7 @@
           <div>
             <label class="block text-sm font-medium text-slate-700">Vive con</label>
             <select id="vive_con" name="vive_con"
-                    class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900">
+                    class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900" required>
               <option>Ambos Padres</option><option>Padre</option><option>Madre</option><option>Otros</option>
             </select>
           </div>
@@ -364,7 +358,7 @@
           <div>
             <label class="block text-sm font-medium text-slate-700">Fecha de matrícula</label>
             <input id="fecha_matricula" name="fecha_matricula" type="date" value="{{ fecha_actual }}"
-                   class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-indigo-500">
+                   class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-indigo-500" required>
           </div>
         </div>
       </section>
@@ -378,10 +372,6 @@
         <button type="submit" name="submit_action" value="save_new"
                 class="w-52 rounded-xl bg-white ring-1 ring-slate-300 text-slate-700 px-6 py-3 font-semibold hover:bg-slate-50 transition">
           Guardar y agregar otro
-        </button>
-        <button type="submit" name="submit_action" value="save_finish"
-                class="w-44 rounded-xl bg-slate-100 text-slate-600 px-6 py-3 font-medium hover:bg-slate-200 transition">
-          Finalizar
         </button>
       </div>
     </form>
