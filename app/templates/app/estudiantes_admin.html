@@ -1,140 +1,94 @@
-<!-- templates/estudiantes_admin.html -->
 {% extends "base.html" %}
-
-{% block title %}Listar Estudiantes por Curso{% endblock %}
-
+{% load perm_extras %}
+{% block title %}Cursos y niveles · Matrículas LSP{% endblock %}
 {% block content %}
-<main class="max-w-7xl mx-auto px-6 py-7">
-  <!-- Breadcrumb + encabezado -->
-  <nav class="flex items-center gap-1.5 text-xs text-slate-400 mb-3">
-    <a href="{% url 'home' %}" class="hover:text-indigo-600">Inicio</a><span>/</span>
-    <span class="text-slate-600 font-medium">Estudiantes por curso</span>
-  </nav>
-  <header class="mb-6">
-    <h1 class="text-2xl font-bold text-slate-900">Estudiantes por Curso</h1>
-    <p class="text-sm text-slate-500 mt-0.5">Elige un curso, ve su nómina y genera el PDF grupal.</p>
+<section>
+  <header class="campus-page-heading">
+    <div>
+      <div class="campus-eyebrow">Gestión escolar / Cursos y niveles</div>
+      <h1>Cursos y niveles</h1>
+      <p>Elige el año, el curso y su letra para consultar los estudiantes.</p>
+    </div>
   </header>
 
-  <!-- Sección de Enseñanza Básica -->
-  <div class="mb-8">
-    <h2 class="text-sm font-bold uppercase tracking-widest text-slate-400 mb-3">Enseñanza Básica</h2>
-    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-      {% for curso in cursos_basica %}
-      <div class="bg-white ring-1 ring-slate-200 rounded-2xl shadow-sm p-5 text-center hover:ring-indigo-200 transition">
-        <h3 class="font-semibold text-slate-800">{{ curso }}</h3>
-        <button class="mt-3 w-full rounded-xl bg-white ring-1 ring-indigo-200 px-4 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 transition" onclick="mostrarEstudiantes('{{ curso }}')">Ver estudiantes</button>
-      </div>
-      {% endfor %}
+  {% if anios %}
+  <form method="get" class="campus-card campus-card-pad mb-6 grid md:grid-cols-4 gap-4 items-end" data-campus-course-picker>
+    <div>
+      <label for="cursos-anio" class="block mb-2">Año académico</label>
+      <select name="anio" id="cursos-anio" class="w-full border border-slate-300">
+        {% for y in anios %}<option value="{{ y }}" {% if y == anio %}selected{% endif %}>{{ y }}</option>{% endfor %}
+      </select>
     </div>
-  </div>
-
-  <!-- Sección de Enseñanza Media -->
-  <div class="mb-8">
-    <h2 class="text-sm font-bold uppercase tracking-widest text-slate-400 mb-3">Enseñanza Media</h2>
-    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-      {% for curso in cursos_media %}
-      <div class="bg-white ring-1 ring-slate-200 rounded-2xl shadow-sm p-5 text-center hover:ring-indigo-200 transition">
-        <h3 class="font-semibold text-slate-800">{{ curso }}</h3>
-        <button class="mt-3 w-full rounded-xl bg-white ring-1 ring-indigo-200 px-4 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 transition" onclick="mostrarEstudiantes('{{ curso }}')">Ver estudiantes</button>
-      </div>
-      {% endfor %}
+    <div>
+      <label for="cursos-nivel" class="block mb-2">Curso / nivel</label>
+      <select name="nivel" id="cursos-nivel" class="w-full border border-slate-300">
+        <option value="">Selecciona un curso</option>
+        {% for n in niveles %}<option value="{{ n }}" {% if n == nivel %}selected{% endif %}>{{ n }}</option>{% endfor %}
+        <option value="inactivos" {% if inactivos %}selected{% endif %}>Egresados / Inactivos</option>
+      </select>
     </div>
-  </div>
-
-  <!-- Sección de Egresados/Inactivos -->
-  <div class="mb-8">
-    <h2 class="text-sm font-bold uppercase tracking-widest text-slate-400 mb-3">Egresados / Inactivos</h2>
-    <div class="bg-white ring-1 ring-slate-200 rounded-2xl shadow-sm p-5 text-center max-w-sm">
-      <h3 class="font-semibold text-slate-800">Egresados / Inactivos</h3>
-      <button class="mt-3 w-full rounded-xl bg-white ring-1 ring-indigo-200 px-4 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 transition" onclick="mostrarEstudiantes('inactivos')">Ver estudiantes</button>
+    <div>
+      <label for="cursos-letra" class="block mb-2">Letra / sección</label>
+      <select name="curso" id="cursos-letra" class="w-full border border-slate-300" {% if not secciones %}disabled{% endif %}>
+        <option value="">{% if inactivos %}Todas las secciones{% elif nivel %}Selecciona una letra{% else %}Primero elige un curso{% endif %}</option>
+        {% for c in secciones %}<option value="{{ c.pk }}" {% if c == curso_seleccionado %}selected{% endif %}>{{ c.letra|default:'Sin letra' }}</option>{% endfor %}
+      </select>
     </div>
-  </div>
+    <button type="submit" class="campus-btn primary">Ver estudiantes</button>
+  </form>
+  <p class="text-sm text-slate-600 mb-6">Las letras disponibles corresponden a los cursos configurados para {{ anio }}.</p>
 
-  <!-- Tabla de Estudiantes -->
-  <div id="tabla-estudiantes" class="hidden mt-8">
-    <div class="bg-white ring-1 ring-slate-200 rounded-2xl shadow-sm overflow-hidden">
-      <div class="px-5 py-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
-        <h2 class="font-bold text-slate-800">Estudiantes del curso <span id="curso-seleccionado" class="text-indigo-700"></span></h2>
-        <button onclick="generarPdfCurso()" class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 transition">
-          Generar PDF del curso
-        </button>
+  {% if curso_seleccionado or inactivos %}
+  <section class="campus-card overflow-hidden" aria-labelledby="curso-titulo">
+    <header class="campus-card-head campus-card-pad">
+      <div>
+        <h2 id="curso-titulo">{% if inactivos %}Egresados / Inactivos · {{ anio }}{% else %}{{ curso_seleccionado.nivel }} {{ curso_seleccionado.letra|default:'' }} · {{ anio }}{% endif %}</h2>
+        <p>{{ estudiantes|length }} estudiante{{ estudiantes|length|pluralize:'s' }}</p>
       </div>
-      <table class="min-w-full text-sm">
-        <thead class="bg-slate-50 border-b border-slate-200 text-[11px] uppercase tracking-wide text-slate-500">
+      {% if curso_seleccionado %}
+        {% permiso_curso user curso_seleccionado 'print' as puede_imprimir_curso %}
+        {% if puede_imprimir_curso %}
+        <a class="campus-btn primary" href="{% url 'imprimir_estudiantes_por_curso' curso_seleccionado.pk %}">
+          {% include 'app/components/icon.html' with name='download' %}PDF del curso
+        </a>
+        {% endif %}
+      {% endif %}
+    </header>
+    <div class="campus-table-wrap">
+      <table>
+        <thead><tr><th>Estudiante</th><th>RUT</th><th>Curso</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <tbody>
+          {% for e in estudiantes %}
           <tr>
-            <th class="px-4 py-3 text-left font-semibold">Estudiante</th>
-            <th class="px-4 py-3 text-left font-semibold">RUT</th>
-            <th class="px-4 py-3 text-left font-semibold">Curso</th>
-            <th class="px-4 py-3 text-left font-semibold">Estado</th>
-            <th class="px-4 py-3 text-right font-semibold">Acciones</th>
-          </tr>
-        </thead>
-        <tbody id="estudiantes-table" class="divide-y divide-slate-100">
-          {% for estudiante in estudiantes %}
-          <tr class="hover:bg-indigo-50/40" data-curso="{{ estudiante.curso }}">
-            <td class="px-4 py-2.5 font-medium text-slate-800">{{ estudiante.nombre_completo }}</td>
-            <td class="px-4 py-2.5 font-mono text-slate-600">{{ estudiante.rut }}</td>
-            <td class="px-4 py-2.5 text-slate-600">{{ estudiante.curso }}</td>
-            <td class="px-4 py-2.5" data-estado><span class="rounded-full bg-emerald-50 ring-1 ring-emerald-200 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">{{ estudiante.estado }}</span></td>
-            <td class="px-4 py-2.5 text-right">
-              <a href="{% url 'imprimir_estudiante' estudiante.rut %}" class="rounded-lg bg-white ring-1 ring-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50">Imprimir</a>
-            </td>
+            <td><a class="font-semibold" href="{% url 'detalles_estudiante' e.id %}?anio={{ anio }}">{{ e.nombre_completo }}</a></td>
+            <td class="font-mono">{{ e.rut }}</td>
+            <td>{{ e.curso|default:'Sin curso' }}</td>
+            <td><span class="campus-badge {% if e.estado == 'Activo' %}success{% endif %}">{{ e.estado }}</span></td>
+            <td><div class="flex flex-wrap gap-2">
+              <a class="campus-btn" href="{% url 'detalles_estudiante' e.id %}?anio={{ anio }}">Ver ficha</a>
+              {% permiso_curso user e.curso 'print' as puede_imprimir %}
+              {% if puede_imprimir %}<a class="campus-btn" href="{% url 'imprimir_estudiante' e.rut %}?anio={{ anio }}">Imprimir</a>{% endif %}
+            </div></td>
           </tr>
           {% empty %}
-          <tr>
-            <td colspan="5" class="px-4 py-8 text-center text-sm text-slate-500">No hay estudiantes registrados en este curso</td>
-          </tr>
+          <tr><td colspan="5" class="text-center">{% if inactivos %}No hay estudiantes egresados o inactivos en {{ anio }}.{% else %}No hay estudiantes registrados en este curso y letra para {{ anio }}.{% endif %}</td></tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
+  </section>
+  {% else %}
+  <div class="campus-card campus-card-pad">
+    <h2 class="text-lg font-semibold">{% if nivel %}Selecciona una letra{% else %}Encuentra tu curso{% endif %}</h2>
+    <p class="text-sm text-slate-600 mt-2">{% if nivel %}Elige una de las secciones disponibles de {{ nivel }} para ver su nómina.{% else %}Selecciona el curso y luego su letra. Aquí aparecerá la nómina del año elegido.{% endif %}</p>
+    {% if not niveles %}<p class="text-sm text-slate-600 mt-2">No hay cursos disponibles para este año según tus permisos.</p>{% endif %}
   </div>
-</main>
-
-<script>
-    function mostrarEstudiantes(curso) {
-        const tablaEstudiantes = document.getElementById('tabla-estudiantes');
-        const estudiantesTable = document.getElementById('estudiantes-table');
-        const cursoSeleccionado = document.getElementById('curso-seleccionado');
-
-        // Mostrar la tabla de estudiantes
-        tablaEstudiantes.classList.remove('hidden');
-        tablaEstudiantes.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        cursoSeleccionado.innerText = curso;
-
-        // Filtrar estudiantes por curso
-        const rows = estudiantesTable.querySelectorAll('tr[data-curso]');
-        rows.forEach(row => {
-            const estudianteCurso = row.getAttribute('data-curso').trim().toLowerCase();
-            const estadoTd = row.querySelector('td[data-estado]');
-            const estadoEstudiante = estadoTd ? estadoTd.textContent.trim().toLowerCase() : '';
-
-            if (curso.toLowerCase() === 'inactivos') {
-                // Mostrar solo estudiantes inactivos o egresados
-                if (estadoEstudiante === 'inactivo' || estadoEstudiante === 'egresado') {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
-            } else {
-                // Mostrar estudiantes del curso seleccionado
-                if (estudianteCurso === curso.toLowerCase() && estadoEstudiante !== 'egresado') {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
-            }
-        });
-    }
-
-    function generarPdfCurso() {
-        const curso = document.getElementById('curso-seleccionado').innerText;
-        if (curso) {
-            window.location.href = `/imprimir_estudiantes/${curso}/`;
-        } else {
-            alert("Por favor seleccione un curso para generar el PDF.");
-        }
-    }
-</script>
-
+  {% endif %}
+  {% else %}
+  <div class="campus-card campus-card-pad">
+    <h2 class="text-lg font-semibold">No hay años académicos disponibles.</h2>
+    <p class="text-sm text-slate-600 mt-2">Revisa los años visibles en Configuración para consultar sus cursos.</p>
+  </div>
+  {% endif %}
+</section>
 {% endblock %}

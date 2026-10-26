@@ -65,6 +65,86 @@ class RegresionesBase(TestCase):
         ))
 
 
+class CursosNivelesTests(RegresionesBase):
+    def setUp(self):
+        self.client.force_login(self.admin)
+        self.url = reverse('listar_estudiantes_admin')
+        self.basica_b = Curso.objects.create(nivel='1° Básico', letra='B', anio=2026)
+        self.basica_c = Curso.objects.create(nivel='1° Básico', letra='C', anio=2026)
+
+    def consultar(self, **query):
+        return self.client.get(self.url, {'anio': 2026, 'nivel': '1° Básico', **query})
+
+    def test_ofrece_solo_letras_configuradas_del_nivel_y_anio(self):
+        AcademicYear.objects.create(anio=2025, is_visible=True)
+        Curso.objects.create(nivel='1° Básico', letra='Z', anio=2025)
+        response = self.consultar()
+        self.assertEqual([c.letra for c in response.context['secciones']], ['A', 'B', 'C'])
+        self.assertNotIn('2° Básico', response.context['niveles'])
+        self.assertEqual(response.context['estudiantes'], [])
+        self.assertContains(response, 'Selecciona una letra')
+        response = self.consultar(curso=self.basica.pk)
+        self.assertContains(response, 'Estudiante Básica')
+        self.assertContains(response, reverse('imprimir_estudiantes_por_curso', args=[self.basica.pk]))
+
+    def test_matricula_anual_determina_la_letra_y_no_duplica_estudiantes(self):
+        self.est.curso = self.basica_b
+        self.est.save(update_fields=['curso'])
+        response = self.consultar(curso=self.basica.pk)
+        self.assertEqual([e.id for e in response.context['estudiantes']], [self.est.pk])
+        self.assertEqual(response.context['estudiantes'][0].curso, self.basica)
+        response = self.consultar(curso=self.basica_b.pk)
+        self.assertEqual(response.context['estudiantes'], [])
+        self.ma.curso = self.basica_b
+        self.ma.save(update_fields=['curso'])
+        response = self.consultar(curso=self.basica_b.pk)
+        self.assertEqual([e.id for e in response.context['estudiantes']], [self.est.pk])
+
+    def test_incluye_fichas_antiguas_sin_matricula_anual(self):
+        datos = {f.attname: getattr(self.est, f.attname) for f in Estudiante._meta.fields if not f.primary_key}
+        legado = Estudiante.objects.create(**dict(datos, rut='987654321', nombre_completo='Ficha antigua'))
+        response = self.consultar(curso=self.basica.pk)
+        self.assertCountEqual([e.id for e in response.context['estudiantes']], [self.est.pk, legado.pk])
+
+    def test_curso_vacio_y_selecciones_invalidas_no_mezclan_nominas(self):
+        response = self.consultar(curso=self.basica_c.pk)
+        self.assertContains(response, 'No hay estudiantes registrados en este curso y letra')
+        for curso_id in (self.media.pk, 'inexistente', 999999999999999999999999):
+            with self.subTest(curso=curso_id):
+                response = self.consultar(curso=curso_id)
+                self.assertEqual(response.status_code, 200)
+                self.assertIsNone(response.context['curso_seleccionado'])
+                self.assertEqual(response.context['estudiantes'], [])
+
+    def test_respeta_anios_visibles_y_permisos_de_nivel_e_impresion(self):
+        AcademicYear.objects.create(anio=2025, is_visible=False)
+        antiguo = Curso.objects.create(nivel='1° Básico', letra='Z', anio=2025)
+        response = self.consultar(anio=2025, curso=antiguo.pk)
+        self.assertEqual(response.context['anios'], [2026])
+        self.assertIsNone(response.context['curso_seleccionado'])
+        self.user.is_staff = True
+        self.user.save(update_fields=['is_staff'])
+        self.user.permisos_nivel.filter(nivel='BASICA').update(can_view=True)
+        self.client.force_login(self.user)
+        response = self.consultar(curso=self.basica.pk)
+        self.assertContains(response, 'Estudiante Básica')
+        self.assertNotIn('1° Medio', response.context['niveles'])
+        self.assertNotContains(response, 'PDF del curso')
+        self.assertNotContains(response, '>Imprimir</a>')
+        response = self.consultar(nivel='1° Medio', curso=self.media.pk)
+        self.assertEqual(response.context['estudiantes'], [])
+        AcademicYear.objects.update(is_visible=False)
+        self.assertContains(self.consultar(), 'No hay años académicos disponibles')
+
+    def test_conserva_egresados_e_inactivos_del_anio(self):
+        self.ma.estado = 'Inactivo'
+        self.ma.save(update_fields=['estado'])
+        response = self.consultar(nivel='inactivos')
+        self.assertEqual([e.id for e in response.context['estudiantes']], [self.est.pk])
+        self.assertEqual(response.context['estudiantes'][0].estado, 'Inactivo')
+        self.assertEqual(response.context['secciones'], [])
+
+
 class CampusDisenoTests(RegresionesBase):
     def test_pantallas_internas_comparten_el_diseno(self):
         self.client.force_login(self.admin)

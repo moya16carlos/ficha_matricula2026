@@ -68,6 +68,12 @@
     const button = document.createElement('button'); button.type = 'button';
     button.className = className; button.textContent = text; return button;
   }
+  const coursePicker = document.querySelector('[data-campus-course-picker]');
+  coursePicker?.addEventListener('change', event => {
+    if (event.target.name === 'anio') coursePicker.elements.nivel.value = '';
+    if (event.target.name !== 'curso') coursePicker.elements.curso.value = '';
+    coursePicker.requestSubmit();
+  });
   document.querySelectorAll('form[data-campus-wizard]').forEach(form => {
     form.querySelectorAll('[required]').forEach(control => {
       const label = control.labels?.[0];

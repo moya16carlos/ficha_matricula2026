@@ -179,25 +179,63 @@ def perfil_usuario_view(request, usuario_id):
 
 @role_required(*PERMITIDOS_TODOS)
 def listar_estudiantes_admin_view(request):
-    # Solo el administrador puede acceder a esta vista
-    if not request.user.is_staff and request.user.rol not in ['ADMINISTRADOR', 'DIRECTIVO']:
-        messages.error(request, "No tienes permiso para crear usuarios.")
+    if not request.user.is_staff and request.user.rol not in (ADMIN, DIRECTIVO):
+        messages.error(request, "No tienes permiso para consultar Cursos y niveles.")
         return redirect("home")
-    
-    # Listar todos los estudiantes
-    estudiantes = Estudiante.objects.filter(
-        filtro_q_por_niveles_permitidos(request.user, 'curso__nivel')
+
+    cursos_permitidos = Curso.objects.filter(
+        filtro_q_por_niveles_permitidos(request.user, 'nivel')
     )
+    anios = list(AcademicYear.objects.filter(is_visible=True)
+                 .order_by('-anio').values_list('anio', flat=True))
+    if not AcademicYear.objects.exists():
+        anios = list(cursos_permitidos.order_by('-anio').values_list('anio', flat=True).distinct())
+    anio = _pick_int(request.GET.get('anio'))
+    if anio not in anios:
+        anio = anios[0] if anios else None
 
-    # Filtrar los cursos para enseñanza básica y media
-    cursos_basica = ['Prekinder', 'Kinder'] + [f"{i}° Básico" for i in range(1, 9)]
-    cursos_media = [f"{i}° Medio" for i in range(1, 5)]
+    cursos = list(cursos_permitidos.filter(anio=anio).order_by('nivel', 'letra'))
+    disponibles = {c.nivel for c in cursos}
+    niveles = [nivel for nivel, _ in Curso.NIVEL_CHOICES if nivel in disponibles]
+    niveles += sorted(disponibles - set(niveles))
+    nivel = (request.GET.get('nivel') or '').strip()
+    curso_id = _pick_int(request.GET.get('curso'))
+    curso = next((c for c in cursos if c.pk == curso_id), None)
+    if curso and not nivel:
+        nivel = curso.nivel
+    if nivel not in niveles and nivel != 'inactivos':
+        nivel = ''
+    secciones = [c for c in cursos if c.nivel == nivel]
+    if curso not in secciones:
+        curso = None
 
-    # Renderizar la plantilla con los estudiantes y los cursos
+    estudiantes = []
+    inactivos = nivel == 'inactivos'
+    if anio and (curso or inactivos):
+        matriculas = MatriculaAnual.objects.filter(anio=anio).filter(
+            filtro_q_por_niveles_permitidos(request.user, 'curso__nivel')
+        ).select_related('curso', 'estudiante__curso')
+        # Una matrícula anual manda sobre el curso actual, incluso si ya cambió de letra.
+        base = Estudiante.objects.filter(curso__anio=anio).filter(
+            filtro_q_por_niveles_permitidos(request.user, 'curso__nivel')
+        ).exclude(matriculas_anuales__anio=anio).select_related('curso')
+        if curso:
+            matriculas = matriculas.filter(curso=curso)
+            base = base.filter(curso=curso)
+        else:
+            matriculas = matriculas.filter(estado__in=('Inactivo', 'Egresado'))
+            base = base.filter(estado__in=('Inactivo', 'Egresado'))
+        for ma in matriculas:
+            ficha = _estudiante_en_matricula(ma.estudiante, ma)
+            estudiantes.append(EstuRow(ficha.pk, ficha.rut, ficha.nombre_completo,
+                                       ma.curso, ma.estado or ficha.estado))
+        estudiantes.extend(base)
+        estudiantes.sort(key=lambda estudiante: estudiante.nombre_completo.casefold())
+
     return render(request, "app/estudiantes_admin.html", {
-        "estudiantes": estudiantes,
-        "cursos_basica": cursos_basica,
-        "cursos_media": cursos_media,
+        'anio': anio, 'anios': anios, 'niveles': niveles, 'nivel': nivel,
+        'secciones': secciones, 'curso_seleccionado': curso,
+        'estudiantes': estudiantes, 'inactivos': inactivos,
     })
 
 @require_POST
