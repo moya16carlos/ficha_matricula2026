@@ -236,6 +236,7 @@ class CambioRutExtranjeroTests(TestCase):
 
     def setUp(self):
         self.directivo = make_user('22222222', rol='DIRECTIVO')
+        self.directivo.permisos_nivel.filter(nivel='MEDIA').update(can_edit=True)
         self.curso = Curso.objects.create(nivel='1° Medio', letra='A', anio=2026)
         self.est = Estudiante.objects.create(
             rut='1003333724', nombre_completo='Extranjero Provisional',
@@ -299,6 +300,8 @@ class ColaRutProvisionalesTests(TestCase):
 
     def setUp(self):
         self.user = make_user('12123434', rol='DIRECTIVO')
+        self.user.permisos_nivel.filter(nivel='MEDIA').update(can_view=True)
+        AcademicYear.objects.create(anio=2026)
         curso = Curso.objects.create(nivel='1° Medio', letra='B', anio=2026)
         self.prov = Estudiante.objects.create(
             rut='1003333724', nombre_completo='Prov Cola Test',
@@ -339,6 +342,7 @@ class BusquedaGlobalTests(TestCase):
 
     def setUp(self):
         self.user = make_user('12123436', rol='DIRECTIVO')
+        self.user.permisos_nivel.filter(nivel='MEDIA').update(can_view=True)
         curso = Curso.objects.create(nivel='1° Medio', letra='A', anio=2026)
         self.est = Estudiante.objects.create(
             rut='131313135', nombre_completo='Camila Busqueda Zeta',
@@ -372,6 +376,7 @@ class AsignarCursoInlineTests(TestCase):
 
     def setUp(self):
         self.user = make_user('12123435', rol='DIRECTIVO')
+        self.user.permisos_nivel.filter(nivel='MEDIA').update(can_edit=True)
         self.curso_a = Curso.objects.create(nivel='1° Medio', letra='A', anio=2026)
         self.curso_b = Curso.objects.create(nivel='1° Medio', letra='B', anio=2026)
         self.est = Estudiante.objects.create(

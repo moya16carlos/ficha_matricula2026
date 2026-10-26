@@ -80,19 +80,9 @@ def imprimir_estudiante(request, rut):
         if placeholder:
             curso_view = placeholder  # OJO: sigue significando "sin curso asignado", es solo para la visual.
 
-    # --- 4) Permisos por nivel (derivados del curso del AÑO solicitado) ---
-    nivel_perm = _nivel_from_curso_obj(curso_view)
-    if nivel_perm is None:
-        # Sin curso “real” (o solo placeholder): exigir permisos amplios
-        if not (
-            getattr(request.user, 'rol', None) == 'ADMINISTRADOR'
-            or has_perm_on_nivel(request.user, 'print', 'BASICA')
-            or has_perm_on_nivel(request.user, 'print', 'MEDIA')
-        ):
-            raise PermissionDenied("Estudiante sin curso asignado en este año: no tienes permisos para imprimir.")
-    else:
-        if not has_perm_on_nivel(request.user, 'print', nivel_perm):
-            raise PermissionDenied(f"No tienes permiso para imprimir estudiantes de {nivel_perm.title()}.")
+    _require_curso_perm(request.user, 'print', getattr(ma, 'curso', None) or estudiante.curso)
+    _require_curso_perm(request.user, 'print', estudiante.curso)
+    estudiante = _estudiante_en_matricula(estudiante, ma)
 
     # --- 5) Título con año resuelto ---
     cfg = ConfiguracionMatricula.objects.filter(activa=True).first()
@@ -115,6 +105,12 @@ def imprimir_estudiante(request, rut):
     )
     elements = []
     styles = getSampleStyleSheet()
+
+    if ma and not ma.datos_congelados:
+        elements.append(Paragraph(
+            'Esta matrícula no conserva antecedentes históricos completos; se muestran los datos actuales.',
+            styles['Normal'],
+        ))
 
     label_style   = ParagraphStyle('label', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=9, leading=11)
     value_style   = ParagraphStyle('value', parent=styles['Normal'], fontName='Helvetica', fontSize=9, leading=11)
@@ -379,6 +375,7 @@ def imprimir_estudiante(request, rut):
 def imprimir_estudiantes_por_curso(request, curso_id):
     # === 1) Resolver el curso (y por ende el año visualizado) ===
     curso = get_object_or_404(Curso, pk=curso_id)
+    _require_curso_perm(request.user, 'print', curso)
     anio_view = int(getattr(curso, 'anio', timezone.now().year))
 
     # === 2) Título dinámico (sin hardcode), respetando el año del curso ===
@@ -476,8 +473,14 @@ def imprimir_estudiantes_por_curso(request, curso_id):
     # === 5) Construcción por alumno (SIEMPRE desde MA del curso/año) ===
     total = ma_list.count()
     for idx, ma in enumerate(ma_list, start=1):
-        estudiante = ma.estudiante
+        _require_curso_perm(request.user, 'print', ma.estudiante.curso)
+        estudiante = _estudiante_en_matricula(ma.estudiante, ma)
         agregar_encabezado()
+        if not ma.datos_congelados:
+            elements.append(Paragraph(
+                'Esta matrícula no conserva antecedentes históricos completos; se muestran los datos actuales.',
+                styles['Normal'],
+            ))
 
         # I. Estudiante
         elements.append(section_title("I. Datos del Estudiante"))

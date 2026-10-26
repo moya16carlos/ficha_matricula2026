@@ -1,5 +1,6 @@
 """Panel de configuración (matrícula, firmas, cursos, años, toggles)."""
 from ._common import *  # noqa: F401,F403
+from django.db.models.deletion import ProtectedError
 
 
 @login_required
@@ -351,6 +352,8 @@ def api_year_create(request):
     return JsonResponse({'ok': True, 'anio': obj.anio, 'is_visible': obj.is_visible})
 
 @login_required
+@role_required(ADMIN)
+@require_POST
 def toggle_year_visibility(request, year_id):
     year = get_object_or_404(AcademicYear, id=year_id)
     if request.method == 'POST':
@@ -359,6 +362,8 @@ def toggle_year_visibility(request, year_id):
     return redirect('panel_config_documentos')
 
 @login_required
+@role_required(ADMIN)
+@require_POST
 def agregar_anio_academico(request):
     if request.method == 'POST':
         anio_str = request.POST.get('anio')

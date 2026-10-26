@@ -164,7 +164,7 @@ def _ensure_matricula(anio_int: int, est: Estudiante, cur: Curso):
     ma, created = MatriculaAnual.objects.get_or_create(
         anio=anio_int,
         estudiante=est,
-        defaults={"curso": cur, "estado": getattr(est, "estado", "Activo")},
+        defaults=dict(MatriculaAnual.defaults_desde_estudiante(est), curso=cur),
     )
     if not created and ma.curso_id != (cur.id if cur else None):
         ma.curso = cur
@@ -386,6 +386,11 @@ def import_sqldump(*, dump_path: str, anio: int, permitir_sin_nivel: bool, stdou
                         skipped["estudiantes"] += 1
                         continue
 
+                    if curso.anio != anio:
+                        curso, _ = Curso.objects.get_or_create(
+                            anio=anio, nivel=curso.nivel, letra=curso.letra,
+                        )
+
                     # Campos extendidos (con defaults seguros)
                     fecha_nacimiento = _coerce_date(_pick("fecha_nacimiento","nacimiento", _rec=rec), date(2000,1,1))
                     sexo = _norm(_pick("sexo","genero","género", _rec=rec)) or "Masculino"
@@ -499,6 +504,7 @@ def import_sqldump(*, dump_path: str, anio: int, permitir_sin_nivel: bool, stdou
                         created["estudiantes"] += 1
                         _ensure_matricula(anio, obj, curso)
                     else:
+                        guardar_ficha = anio >= obj.curso.anio
                         fields_to_update = []
                         def _set(field, value):
                             nonlocal fields_to_update
@@ -532,7 +538,13 @@ def import_sqldump(*, dump_path: str, anio: int, permitir_sin_nivel: bool, stdou
                         obj.acepta_fotografias = acepta_fotografias
                         obj.certificado_medico = certificado_medico
 
-                        obj.save(update_fields=list(set(fields_to_update)))
+                        fields_to_update += [
+                            'ascendencia_indigena', 'pertenece_al_pie', 'ha_repetido_curso',
+                            'resolucion_judicial', 'problemas_salud', 'impide_educacion_fisica',
+                            'opta_religion', 'acepta_fotografias', 'certificado_medico',
+                        ]
+                        if guardar_ficha:
+                            obj.save(update_fields=list(set(fields_to_update)))
                         updated["estudiantes"] += 1
                         _ensure_matricula(anio, obj, curso)
 

@@ -2,6 +2,7 @@
 
 from django.conf import settings
 from django.db import models
+from django.core.exceptions import ValidationError
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.dispatch import receiver
@@ -75,7 +76,7 @@ class Usuarios(AbstractBaseUser, PermissionsMixin):
         Los administradores siempre tienen todos los permisos.
         action: 'view' | 'add' | 'edit' | 'print'
         """
-        if self.rol == 'ADMINISTRADOR':
+        if self.rol == 'ADMINISTRADOR' or self.is_superuser:
             return True
 
         perm = self.permisos_nivel.filter(nivel=nivel).first()
@@ -351,9 +352,9 @@ class ConfiguracionMatricula(models.Model):
     def __str__(self):
         return f"{self.anio} - {'Activa' if self.activa else 'Inactiva'}"
 
-    def titulo_resuelto(self):
+    def titulo_resuelto(self, anio=None):
         # Permite usar {anio} en el título
-        return (self.titulo or '').format(anio=self.anio)
+        return (self.titulo or '').format(anio=self.anio if anio is None else anio)
     
 
 class ConfiguracionSistema(models.Model):
@@ -438,6 +439,28 @@ class MatriculaAnual(models.Model):
     )
 
     nombre_snapshot = models.CharField(max_length=120, blank=True, null=True)
+    datos_congelados = models.BooleanField(default=False)
+    fecha_nacimiento_apoderado = models.DateField(blank=True, null=True)
+    parentesco_apoderado_suplente = models.CharField(max_length=40, blank=True, null=True)
+    seguro_salud_complementario = models.CharField(max_length=100, blank=True, null=True)
+
+    @classmethod
+    def defaults_desde_estudiante(cls, estudiante):
+        datos = {
+            campo.name: getattr(estudiante, campo.name)
+            for campo in cls._meta.fields
+            if campo.name not in ('id', 'estudiante') and hasattr(estudiante, campo.name)
+        }
+        return dict(datos, nombre_snapshot=estudiante.nombre_completo, datos_congelados=True)
+
+    def clean(self):
+        super().clean()
+        if self.curso_id and self.curso.anio != self.anio:
+            raise ValidationError({'curso': 'El curso debe pertenecer al año de la matrícula.'})
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        return super().save(*args, **kwargs)
 
     class Meta:
         verbose_name = "Matrícula anual"

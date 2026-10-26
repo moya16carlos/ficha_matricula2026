@@ -2,6 +2,9 @@
 {% block title %}Detalles del Estudiante{% endblock %}
 
 {% block content %}
+{% if ma and not ma.datos_congelados %}
+  <p role="status">Esta matrícula no conserva antecedentes históricos completos; se muestran los datos actuales del estudiante.</p>
+{% endif %}
 <section class="py-8">
   <div class="mx-auto max-w-6xl px-6">
     {% if messages %}

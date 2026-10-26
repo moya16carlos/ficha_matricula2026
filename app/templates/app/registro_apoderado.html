@@ -53,6 +53,9 @@
         </div>
         {% endif %}
 
+        {% if form.errors %}
+          <div role="alert">{{ form.errors }}</div>
+        {% endif %}
         <form action="{% url 'registro_apoderado' %}" method="post" class="space-y-5" novalidate>
           {% csrf_token %}
 

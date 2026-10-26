@@ -1,5 +1,6 @@
 """Flujo público de apoderado: registro y matriculación de alumnos."""
 from ._common import *  # noqa: F401,F403
+from app.forms import ApoderadoRegistroForm
 
 
 @transaction.atomic
@@ -8,19 +9,19 @@ def registro_alumno_view(request):
     Permite a un apoderado registrar varios estudiantes.
     AHORA incluye: fecha_nacimiento_apoderado y fecha_nacimiento_apoderado_suplente (opcionales).
     """
+    if not ConfiguracionSistema.objects.filter(pk=1, registro_apoderado_habilitado=True).exists():
+        raise PermissionDenied('El registro de apoderados está deshabilitado.')
     # 0) Apoderado desde sesión
     apoderado_id = request.session.get('apoderado_id')
-    apoderado = get_object_or_404(Apoderado, id=apoderado_id) if apoderado_id else None
+    apoderado = Apoderado.objects.filter(pk=apoderado_id, is_active=True).first()
+    if not apoderado:
+        return redirect('registro_apoderado')
 
     # 1) Años visibles
     anios_visibles = list(
         AcademicYear.objects.filter(is_visible=True)
         .order_by('anio').values_list('anio', flat=True)
     )
-    if not anios_visibles:
-        anios_visibles = list(
-            Curso.objects.order_by('anio').values_list('anio', flat=True).distinct()
-        )
 
     # 2) Año seleccionado
     raw_anio_get = (request.GET.get('anio') or '').strip()
@@ -42,6 +43,8 @@ def registro_alumno_view(request):
 
     if anio_sel is None and anios_visibles:
         anio_sel = int(anios_visibles[-1])
+    if anio_sel not in anios_visibles:
+        return HttpResponse('El año seleccionado no está habilitado.', status=400)
 
     # 3) Cursos del año seleccionado
     cursos = Curso.objects.none()
@@ -264,17 +267,14 @@ def registro_alumno_view(request):
         MatriculaAnual.objects.update_or_create(
             anio=curso.anio,
             estudiante=est,
-            defaults={'curso': curso, 'estado': est.estado or 'Activo'}
+            defaults=MatriculaAnual.defaults_desde_estudiante(est)
         )
-
-        imprimir_url = request.build_absolute_uri(f"/imprimir-estudiante/{est.rut}/")
 
         if is_ajax:
             keep_year = (submit_action == 'save_new')
             return JsonResponse({
                 'ok': True,
                 'id': est.id,
-                'imprimir_url': imprimir_url,
                 'anio_sel': anio_sel,
                 'reset_only_student_fields': keep_year,
                 'quien_matricula': quien_matricula,
@@ -331,27 +331,16 @@ def alumno_matriculado(request):
 
 ##REGISTRO DE APODERADO
 def registrar_apoderado(request):
+    if not ConfiguracionSistema.objects.filter(pk=1, registro_apoderado_habilitado=True).exists():
+        raise PermissionDenied('El registro de apoderados está deshabilitado.')
     if request.method == 'POST':
-        run = request.POST.get('run')
-        nombre = request.POST.get('nombre')
-        apellido = request.POST.get('apellido')
-        email = request.POST.get('email')
-        password = request.POST.get('password')
-
-        # Validación básica
-        if Apoderado.objects.filter(run=run).exists():
-            return HttpResponse("Ya existe un apoderado con ese RUT")
-
-        # Crear el apoderado
-        apoderado = Apoderado.objects.create(
-            run=run,
-            nombre=nombre,
-            apellido=apellido,
-            email=email,
-            password=password
-        )
+        form = ApoderadoRegistroForm(request.POST)
+        if not form.is_valid():
+            return render(request, 'app/registro_apoderado.html', {'form': form}, status=400)
+        apoderado = form.save()
 
         # ✅ Guardar el ID del apoderado en la sesión
+        request.session.cycle_key()
         request.session['apoderado_id'] = apoderado.id
 
         # Mensaje opcional

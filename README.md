@@ -94,6 +94,26 @@ DJANGO_SETTINGS_MODULE=matriculas_lsp.settings_test .venv/bin/python manage.py t
 Cubren: modelo/permisos de usuario, decoradores de rol, helpers de RUT/fecha,
 seed y clonación de años con promoción de curso, login, y smoke-test de PDFs.
 
+También incluyen regresiones de acceso por nivel y acción, cierre del registro
+público, rollback de matrículas y restauración CSV/JSON con antecedentes anuales.
+
+### Permisos, importación y antecedentes anuales
+
+- Solo administradores y superusuarios pueden importar, exportar y modificar años.
+  `is_staff` por sí solo no concede esos permisos. Los demás usuarios necesitan
+  permisos explícitos de Básica/Media para consultar, editar o imprimir.
+- El registro público comprueba que esté habilitado y exige una sesión de
+  apoderado activo para inscribir alumnos.
+- Las exportaciones de usuarios excluyen contraseñas. Los usuarios nuevos
+  importados quedan sin contraseña utilizable; un administrador debe asignarla.
+  CSV/JSON no reemplaza un respaldo completo de la base de datos y los archivos.
+- La importación de un archivo es atómica: cualquier fila inválida revierte
+  todos los cambios. La validación sin guardar comprueba los mismos datos.
+- La migración `0032` agrega antecedentes anuales y reconoce las copias que ya
+  tenían datos. No reconstruye datos históricos inexistentes ni corrige cursos
+  antiguos asignados al año equivocado. Las fichas sin copia anual muestran un aviso.
+- `.dockerignore` excluye secretos, bases y respaldos del paquete Docker.
+
 ## 3. Migraciones
 
 ```bash

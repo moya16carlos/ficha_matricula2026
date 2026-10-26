@@ -136,7 +136,7 @@
             </td>
             <td class="px-4 py-3">
               <div class="flex gap-1.5">
-                <a href="{% url 'detalles_estudiante' ma.estudiante_id %}"
+                <a href="{% url 'detalles_estudiante' ma.estudiante_id %}?anio={{ anio }}"
                    class="rounded-lg bg-slate-100 hover:bg-slate-200 px-2 py-1 text-xs font-medium text-slate-700">Ficha</a>
                 <a href="{% url 'imprimir_estudiante' ma.estudiante.rut %}?anio={{ anio }}"
                    class="rounded-lg bg-indigo-600 hover:bg-indigo-700 px-2 py-1 text-xs font-medium text-white">PDF</a>

@@ -64,7 +64,12 @@ def _csv_to_datasets(uploaded_file, selected_datasets):
       2) CSV 'seccionado' como el que exportas:
          líneas con '=== ESTUDIANTES ===', luego cabeceras, luego filas; y así por dataset.
     """
-    raw = uploaded_file.read().decode("utf-8", errors="ignore")
+    raw = uploaded_file.read().decode("utf-8-sig")
+    header = next((line for line in raw.splitlines() if line.strip() and not line.startswith('===')), '')
+    try:
+        dialect = csv.Sniffer().sniff(header, delimiters=',;|\t')
+    except csv.Error:
+        dialect = csv.excel
     sio = io.StringIO(raw)
     sio.seek(0)
 
@@ -72,7 +77,7 @@ def _csv_to_datasets(uploaded_file, selected_datasets):
 
     # --- Formato 1: con columna dataset
     try:
-        reader = csv.DictReader(sio)
+        reader = csv.DictReader(sio, dialect=dialect)
         headers = [h.lower() for h in (reader.fieldnames or [])]
         ds_col = next((h for h in ("dataset", "_dataset", "tabla", "tipo") if h in headers), None)
         if ds_col:
@@ -95,7 +100,7 @@ def _csv_to_datasets(uploaded_file, selected_datasets):
     data.clear()
     cur_ds = None
     headers = None
-    reader = csv.reader(io.StringIO(raw))
+    reader = csv.reader(io.StringIO(raw), dialect=dialect)
     for row in reader:
         if not row:
             continue
@@ -131,7 +136,7 @@ def _csv_to_datasets(uploaded_file, selected_datasets):
     # Si no vino nada, asume todo para el primer dataset seleccionado (compat anterior)
     if not data:
         ds = selected_datasets[0] if selected_datasets else "estudiantes"
-        reader = csv.DictReader(io.StringIO(raw))
+        reader = csv.DictReader(io.StringIO(raw), dialect=dialect)
         data = {ds: list(reader)}
     return dict(data)
 
@@ -204,29 +209,16 @@ def _validate_columns(data_dict):
 
 
 def _resolve_curso(row, anio_defecto=None):
-    """
-    Devuelve instancia de Curso o None.
-    Soporta:
-      - curso_id / course_id
-      - (curso_nivel|nivel, curso_letra|letra?, curso_anio|anio?)
-    """
-    cid = _pick_int(row.get("curso_id") or row.get("course_id"))
-    if cid:
-        try:
-            return Curso.objects.get(id=cid)
-        except Curso.DoesNotExist:
-            return None
-
-    nivel = _norm(row.get("curso_nivel") or row.get("nivel"))
-    letra = _norm(row.get("curso_letra") or row.get("letra")) or None
-    anio = _pick_int(row.get("curso_anio") or row.get("anio"), anio_defecto)
-
+    nivel = _norm(row.get('curso_nivel') or row.get('nivel'))
+    letra = _norm(row.get('curso_letra') or row.get('letra')) or None
+    anio = anio_defecto or _pick_int(row.get('curso_anio') or row.get('anio'))
     if nivel and anio:
-        try:
-            return Curso.objects.get(nivel=nivel, letra=letra, anio=anio)
-        except Curso.DoesNotExist:
-            return None
-    return None
+        return Curso.objects.filter(nivel=nivel, letra=letra, anio=anio).first()
+    cid = _pick_int(row.get('curso_id') or row.get('course_id') or row.get('curso'))
+    curso = Curso.objects.filter(pk=cid).first() if cid else None
+    if curso and anio and curso.anio != anio:
+        return Curso.objects.filter(nivel=curso.nivel, letra=curso.letra, anio=anio).first()
+    return curso
 
 
 def _get_or_create_curso_comodin(anio: int) -> "Curso":
@@ -241,39 +233,27 @@ def _get_or_create_curso_comodin(anio: int) -> "Curso":
     )[0]
 
 
-def _safe_defaults_estudiante(row):
-    """
-    Valores por defecto para campos obligatorios si no vienen en el archivo.
-    AJUSTA a tus reglas reales (fechas, comuna, etc).
-    """
-    def _date_or_default(key, default_dt):
-        v = _norm(row.get(key))
-        if v:
-            try:
-                y, m, d = v.split("-")
-                return date(int(y), int(m), int(d))
-            except Exception:
-                return default_dt
-        return default_dt
-
-    defaults = {
-        "nombre_completo": _norm(row.get("nombre_completo")) or _norm(row.get("nombre")) or "SIN NOMBRE",
-        "fecha_nacimiento": _date_or_default("fecha_nacimiento", date(2000, 1, 1)),
-        "sexo": _norm(row.get("sexo")) or "Masculino",
-        "nacionalidad": _norm(row.get("nacionalidad")) or "Chilena",
-        "domicilio": _norm(row.get("domicilio")) or "S/I",
-        "comuna": _norm(row.get("comuna")) or "S/I",
-        "vive_con": _norm(row.get("vive_con")) or "Otros",
-        "fecha_matricula": _date_or_default("fecha_matricula", date.today()),
-        "sistema_salud": _norm(row.get("sistema_salud")) or "Fonasa",
-    }
-    return defaults
+def _apply_import_fields(obj, row, excluded):
+    for field in obj._meta.fields:
+        if field.primary_key or field.name in excluded:
+            continue
+        key = field.attname if field.attname in row else field.name
+        if key not in row:
+            continue
+        value = row[key]
+        if field.get_internal_type() == 'BooleanField' and isinstance(value, str):
+            if value.lower() not in ('true', 'false', '1', '0', 'si', 'sí', 'no', 'on', 'off', ''):
+                raise ValidationError(f'Valor booleano inválido en {key}.')
+            value = _to_bool(value)
+        if value in ('', None) and field.null:
+            value = None
+        setattr(obj, field.attname, field.to_python(value))
 
 
 def _model_field_names(model):
     """Todos los campos concretos (incluye FK como *_id), sin M2M ni reversos."""
     return [
-        f.name
+        f.attname
         for f in model._meta.get_fields()
         if getattr(f, "concrete", False) and not f.many_to_many and not f.auto_created
     ]
@@ -283,10 +263,13 @@ def _model_field_names(model):
 # EXPORTACIÓN (general)
 # =========================
 @login_required
+@role_required(ADMIN)
 def export_datos(request):
     year_raw = request.GET.get('anio')
     formato = (_norm(request.GET.get('formato')) or 'csv').lower()
     sep = request.GET.get('sep', ',')
+    if sep not in (',', ';', '|', '\t'):
+        return HttpResponse('Separador inválido.', status=400)
     datasets = request.GET.getlist('datasets')
 
     solo_activos = _bool(request.GET.get('solo_activos'))
@@ -311,19 +294,20 @@ def export_datos(request):
 
     # === ESTUDIANTES ===
     if 'estudiantes' in wanted:
-        qs = Estudiante.objects.select_related('curso')
+        qs = Estudiante.objects.select_related('curso', 'matriculado_por')
         if solo_activos:
             qs = qs.filter(estado='Activo')
         if incluir_sin_nivel:
-            qs = qs.filter(Q(curso__anio=year) | Q(curso__isnull=True))
+            qs = qs.filter(Q(matriculas_anuales__anio=year) | Q(curso__anio=year) | Q(curso__isnull=True))
         else:
-            qs = qs.filter(curso__anio=year)
+            qs = qs.filter(Q(matriculas_anuales__anio=year) | Q(curso__anio=year))
         qs = qs.distinct()
 
         out = []
         for e in qs.iterator():
             d = model_to_dict(e)
             d["rut"] = e.rut
+            d["matriculado_por_run"] = e.matriculado_por.run if e.matriculado_por_id else None
             if e.curso_id:
                 d["curso_id"] = e.curso_id
                 d["curso_nivel"] = e.curso.nivel
@@ -355,7 +339,9 @@ def export_datos(request):
 
     # === USUARIOS ===
     if 'usuarios' in wanted:
-        all_data['usuarios'] = list(Usuarios.objects.values())
+        all_data['usuarios'] = list(Usuarios.objects.values(
+            'id_usuario', 'run', 'nombre', 'apellido', 'email', 'rol', 'is_active',
+        ))
 
     # === Salidas ===
     if formato == 'json':
@@ -388,6 +374,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 # EXPORTACIÓN (Estudiantes por año - todos los campos)
 # =========================
 @login_required
+@role_required(ADMIN)
 def export_estudiantes_por_anio(request):
     """
     Descarga TODOS los datos de Estudiante filtrados por año (curso__anio).
@@ -399,7 +386,9 @@ def export_estudiantes_por_anio(request):
       - GET incluir_sin_nivel=on/true  -> incluye estudiantes con curso NULL
     """
     formato = (_norm(request.GET.get("formato")) or "csv").lower()
-    sep = request.GET.get("sep", ",")
+    sep = request.GET.get('sep', ',')
+    if sep not in (',', ';', '|', '\t'):
+        return HttpResponse('Separador inválido.', status=400)
     solo_activos = _bool(request.GET.get("solo_activos"))
     incluir_sin_nivel = _bool(request.GET.get("incluir_sin_nivel"))
 
@@ -417,9 +406,9 @@ def export_estudiantes_por_anio(request):
         qs = qs.filter(estado="Activo")
 
     if incluir_sin_nivel:
-        qs = qs.filter(Q(curso__anio=year) | Q(curso__isnull=True))
+        qs = qs.filter(Q(matriculas_anuales__anio=year) | Q(curso__anio=year) | Q(curso__isnull=True))
     else:
-        qs = qs.filter(curso__anio=year)
+        qs = qs.filter(Q(matriculas_anuales__anio=year) | Q(curso__anio=year))
 
     qs = qs.distinct()
 
@@ -473,222 +462,132 @@ def export_estudiantes_por_anio(request):
 # IMPORTACIÓN
 # =========================
 @login_required
+@role_required(ADMIN)
+@require_POST
 def import_datos_panel(request):
-    """
-    Importa CSV/JSON a datasets (valida estructura antes).
-    Orden de carga: cursos → estudiantes → matriculas → usuarios
-    """
-    if request.method != "POST":
-        return redirect("panel_config_documentos")
-
-    archivo = request.FILES.get("archivo")
-    datasets = request.POST.getlist("datasets")
-    modo = (_norm(request.POST.get("modo")) or "upsert").lower()        # upsert|overwrite|skip
-    anio_destino = _pick_int(request.POST.get("anio_destino"))
-    validate_only = _bool(request.POST.get("validate_only"))
-    permitir_sin_nivel = _bool(request.POST.get("permitir_sin_nivel"))
-
-    if not archivo:
-        messages.error(request, "Debes subir un archivo CSV o JSON.")
-        return redirect("panel_config_documentos")
-
-    if not datasets:
-        messages.error(request, "Debes seleccionar al menos un dataset.")
-        return redirect("panel_config_documentos")
-
-    if not anio_destino or not AcademicYear.objects.filter(anio=anio_destino, is_visible=True).exists():
-        messages.error(request, "El año de destino no es visible o no es válido.")
-        return redirect("panel_config_documentos")
-
-    wanted = set(slugify(d).replace("-", "_") for d in datasets)
-
+    archivo = request.FILES.get('archivo')
+    wanted = set(request.POST.getlist('datasets'))
+    modo = request.POST.get('modo') or 'upsert'
+    anio = _pick_int(request.POST.get('anio_destino'))
+    validate_only = _bool(request.POST.get('validate_only'))
+    permitir_sin_nivel = _bool(request.POST.get('permitir_sin_nivel'))
+    if not archivo or not wanted or wanted - {'cursos', 'estudiantes', 'matriculas', 'usuarios'}:
+        messages.error(request, 'Selecciona un archivo y datasets válidos.')
+        return redirect('panel_config_documentos')
+    if modo not in ('upsert', 'overwrite', 'skip') or not AcademicYear.objects.filter(anio=anio, is_visible=True).exists():
+        messages.error(request, 'Modo de importación o año destino inválido.')
+        return redirect('panel_config_documentos')
     try:
-        if archivo.name.lower().endswith(".json"):
-            payload = json.load(archivo)
-            if isinstance(payload, dict):
-                data = {k: v for k, v in payload.items() if k in wanted}
-            elif isinstance(payload, list):
-                ds = next(iter(wanted or []), "estudiantes")
-                data = {ds: payload}
-            else:
-                raise ValueError("Formato JSON no soportado.")
+        if archivo.name.lower().endswith('.json'):
+            data = json.load(archivo)
+            if isinstance(data, list) and len(wanted) == 1:
+                data = {next(iter(wanted)): data}
+            if not isinstance(data, dict):
+                raise ValueError('El JSON debe contener un objeto por dataset.')
         else:
-            data = _csv_to_datasets(archivo, list(wanted))
-    except Exception as e:
-        messages.error(request, f"Error leyendo archivo: {e}")
-        return redirect("panel_config_documentos")
+            data = _csv_to_datasets(archivo, sorted(wanted))
+        if any(not isinstance(data.get(ds, []), list) for ds in wanted):
+            raise ValueError('Cada dataset debe ser una lista de filas.')
+        data = {ds: _sanitize_rows(data.get(ds, [])) for ds in wanted}
+        errors, _ = _validate_columns(data)
+        if errors:
+            raise ValueError(' · '.join(errors))
 
-    for k, rows in list(data.items()):
-        data[k] = _sanitize_rows(rows)
-
-    validation_errors, _validation_warnings = _validate_columns(data)
-    if validation_errors:
-        for err in validation_errors:
-            _append_csv_log(request.session, f"❌ {err}")
-        messages.error(request, "Validación fallida: faltan columnas requeridas en uno o más datasets.")
-        return redirect("panel_config_documentos")
-    else:
-        _append_csv_log(request.session, "✅ Validación OK: columnas mínimas presentes.")
-
-    if validate_only:
-        messages.success(request, "Validación completada: no se realizaron cambios.")
-        return redirect("panel_config_documentos")
-
-    summary = {k: {"created": 0, "updated": 0, "skipped": 0} for k in ("cursos", "estudiantes", "matriculas", "usuarios")}
-    ordered = ["cursos", "estudiantes", "matriculas", "usuarios"]
-
-    for ds in ordered:
-        rows = data.get(ds, [])
-        if not rows or ds not in wanted:
-            continue
-
-        try:
-            with transaction.atomic():
-                # === CURSOS ===
-                if ds == "cursos":
-                    for r in rows:
-                        nivel = _norm(r.get("nivel"))
-                        letra = _norm(r.get("letra")) or None
-                        anio = _pick_int(r.get("anio"), anio_destino)
-                        if not nivel or not anio:
-                            summary["cursos"]["skipped"] += 1
+        created = updated = skipped = 0
+        with transaction.atomic():
+            for ds in ('usuarios', 'cursos', 'estudiantes', 'matriculas'):
+                for row in data.get(ds, []):
+                    if ds == 'usuarios':
+                        run = _norm_run(row.get('run'))
+                        if not run:
+                            raise ValueError('Cada usuario debe tener un RUT.')
+                        obj = Usuarios.objects.filter(run=run).first()
+                        is_new = obj is None
+                        if not obj:
+                            obj = Usuarios(run=run)
+                            obj.set_unusable_password()
+                        if not is_new and modo == 'skip':
+                            skipped += 1
                             continue
-                        obj, created = Curso.objects.get_or_create(nivel=nivel, letra=letra, anio=anio)
-                        if created:
-                            summary["cursos"]["created"] += 1
+                        safe = {k: row[k] for k in ('nombre', 'apellido', 'email', 'rol', 'is_active') if k in row}
+                        _apply_import_fields(obj, safe, ())
+                    elif ds == 'cursos':
+                        nivel = _norm(row.get('nivel'))
+                        if nivel not in dict(Curso.NIVEL_CHOICES) and nivel not in (NIVEL_POR_ASIGNAR, NIVEL_EGRESADOS):
+                            raise ValueError('Nivel de curso inválido.')
+                        obj, is_new = Curso.objects.get_or_create(
+                            nivel=nivel, letra=_norm(row.get('letra')) or None, anio=anio,
+                        )
+                        if is_new:
+                            created += 1
                         else:
-                            if modo in ("upsert", "overwrite"):
-                                obj.save()
-                                summary["cursos"]["updated"] += 1
-                            else:
-                                summary["cursos"]["skipped"] += 1
-
-                # === ESTUDIANTES ===
-                elif ds == "estudiantes":
-                    for r in rows:
-                        rut = _norm_rut(r.get("rut"))
+                            skipped += 1
+                        continue
+                    else:
+                        rut = _norm_rut(row.get('rut') or row.get('estudiante_rut'))
                         if not rut:
-                            summary["estudiantes"]["skipped"] += 1
-                            continue
-
-                        curso = _resolve_curso(r, anio_defecto=anio_destino)
-                        if not curso:
-                            if permitir_sin_nivel:
-                                curso = _get_or_create_curso_comodin(anio_destino)
-                            else:
-                                summary["estudiantes"]["skipped"] += 1
-                                continue
-
-                        defaults = _safe_defaults_estudiante(r)
-
-                        e = estudiante_por_rut(rut)  # tolera RUT legado con guion
-                        if e:
-                            if modo in ("upsert", "overwrite"):
-                                if _norm(r.get("nombre_completo")) or _norm(r.get("nombre")):
-                                    e.nombre_completo = defaults["nombre_completo"]
-                                e.curso = curso
-                                e.save()
-                                summary["estudiantes"]["updated"] += 1
-                            else:
-                                summary["estudiantes"]["skipped"] += 1
-                        else:
-                            Estudiante.objects.create(
-                                rut=rut,
-                                nombre_completo=defaults["nombre_completo"],
-                                fecha_nacimiento=defaults["fecha_nacimiento"],
-                                sexo=defaults["sexo"],
-                                curso=curso,
-                                nacionalidad=defaults["nacionalidad"],
-                                domicilio=defaults["domicilio"],
-                                comuna=defaults["comuna"],
-                                vive_con=defaults["vive_con"],
-                                fecha_matricula=defaults["fecha_matricula"],
-                                sistema_salud=defaults["sistema_salud"],
-                            )
-                            summary["estudiantes"]["created"] += 1
-
-                # === MATRICULAS ===
-                elif ds == "matriculas":
-                    for r in rows:
-                        rut = _norm_rut(r.get("rut") or r.get("estudiante_rut"))
-                        if not rut:
-                            summary["matriculas"]["skipped"] += 1
-                            continue
-
-                        e = estudiante_por_rut(rut)  # tolera RUT legado con guion
-                        if not e:
-                            summary["matriculas"]["skipped"] += 1
-                            continue
-
-                        curso = _resolve_curso(r, anio_defecto=anio_destino)
+                            raise ValueError(f'Falta el RUT en {ds}.')
+                        est = estudiante_por_rut(rut)
+                        curso = _resolve_curso(row, anio_defecto=anio)
                         if not curso and permitir_sin_nivel:
-                            curso = _get_or_create_curso_comodin(anio_destino)
-
-                        m = MatriculaAnual.objects.filter(anio=anio_destino, estudiante=e).first()
-                        if m:
-                            if modo in ("upsert", "overwrite"):
-                                m.curso = curso
-                                m.save()
-                                summary["matriculas"]["updated"] += 1
-                            else:
-                                summary["matriculas"]["skipped"] += 1
+                            curso = _get_or_create_curso_comodin(anio)
+                        if not curso and ds == 'estudiantes':
+                            raise ValueError(f'No hay curso del año {anio} para el RUT {rut}.')
+                        if ds == 'estudiantes':
+                            obj = est or Estudiante(rut=rut)
+                            is_new = est is None
+                            if not is_new and modo == 'skip':
+                                skipped += 1
+                                continue
+                            guardar_ficha = is_new or curso.anio >= obj.curso.anio
+                            obj.curso = curso
+                            _apply_import_fields(obj, row, ('rut', 'curso', 'matriculado_por'))
+                            if row.get('matriculado_por_run'):
+                                obj.matriculado_por = Usuarios.objects.get(run=row['matriculado_por_run'])
+                            elif row.get('matriculado_por') or row.get('matriculado_por_id'):
+                                obj.matriculado_por_id = _pick_int(row.get('matriculado_por') or row.get('matriculado_por_id'))
                         else:
-                            MatriculaAnual.objects.create(anio=anio_destino, estudiante=e, curso=curso)
-                            summary["matriculas"]["created"] += 1
-
-                # === USUARIOS ===
-                elif ds == "usuarios":
-                    for r in rows:
-                        run = _norm(r.get("run"))
-                        email = _norm(r.get("email")) or None
-                        if not run and not email:
-                            summary["usuarios"]["skipped"] += 1
-                            continue
-                        u = Usuarios.objects.filter(run=run).first() if run else Usuarios.objects.filter(email=email).first()
-                        if u:
-                            if modo in ("upsert", "overwrite"):
-                                if _norm(r.get("nombre")):
-                                    u.nombre = _norm(r.get("nombre"))
-                                if _norm(r.get("apellido")):
-                                    u.apellido = _norm(r.get("apellido"))
-                                if email:
-                                    u.email = email
-                                u.save()
-                                summary["usuarios"]["updated"] += 1
-                            else:
-                                summary["usuarios"]["skipped"] += 1
-                        else:
-                            Usuarios.objects.create(
-                                run=run or "",
-                                nombre=_norm(r.get("nombre")),
-                                apellido=_norm(r.get("apellido")),
-                                email=email,
-                            )
-                            summary["usuarios"]["created"] += 1
-
-        except Exception as e:
-            _append_csv_log(request.session, f"❌ Error en {ds}: {e}")
-            messages.error(request, f"Error importando {ds}: {e}")
-
-    parts = [
-        f"{k}: Creados {v['created']}, Actualizados {v['updated']}, Omitidos {v['skipped']}"
-        for k, v in summary.items()
-        if (v['created'] + v['updated'] + v['skipped']) > 0
-    ]
-    if parts:
-        messages.success(request, f"Importación completada ({modo}). " + " · ".join(parts))
-        _append_csv_log(request.session, "✅ " + " · ".join(parts))
+                            if not est:
+                                raise ValueError(f'No existe el estudiante {rut}.')
+                            obj = MatriculaAnual.objects.filter(estudiante=est, anio=anio).first()
+                            is_new = obj is None
+                            if not obj:
+                                obj = MatriculaAnual(estudiante=est, anio=anio, **MatriculaAnual.defaults_desde_estudiante(est))
+                            if not is_new and modo == 'skip':
+                                skipped += 1
+                                continue
+                            obj.curso = curso
+                            _apply_import_fields(obj, row, ('estudiante', 'curso', 'anio'))
+                    obj.full_clean()
+                    if ds != 'estudiantes' or guardar_ficha:
+                        obj.save()
+                    if ds == 'estudiantes':
+                        guardar_ma = (MatriculaAnual.objects.get_or_create if 'matriculas' in wanted
+                                      else MatriculaAnual.objects.update_or_create)
+                        guardar_ma(
+                            estudiante=obj, anio=anio,
+                            defaults=MatriculaAnual.defaults_desde_estudiante(obj),
+                        )
+                    if is_new:
+                        created += 1
+                    else:
+                        updated += 1
+            if validate_only:
+                transaction.set_rollback(True)
+    except (ValueError, TypeError, ValidationError, IntegrityError, Usuarios.DoesNotExist) as exc:
+        _append_csv_log(request.session, f'❌ Importación cancelada: {exc}')
+        messages.error(request, f'No se importó ningún dato: {exc}')
+        return redirect('panel_config_documentos')
+    if validate_only:
+        messages.success(request, 'Validación completada: no se realizaron cambios.')
     else:
-        messages.info(request, "No se importaron filas.")
+        messages.success(request, f'Importación completada: creados {created}, actualizados {updated}, omitidos {skipped}.')
+    return redirect('panel_config_documentos')
 
-    return redirect("panel_config_documentos")
 
 ######## importacion por sql###########
 from app.sql_import_runner import import_sqldump as run_import_sqldump  # 👈 alias seguro
 
-
-def _is_staff_or_superuser(user):
-    return user.is_active and (user.is_staff or user.is_superuser)
 
 def _append_sql_log(session, line):
     buff = session.get("sql_import_log", [])
@@ -699,7 +598,7 @@ def _append_sql_log(session, line):
     session.modified = True
 
 @login_required
-@user_passes_test(_is_staff_or_superuser)
+@role_required(ADMIN)
 def importar_sql_dump(request):
     if request.method != "POST":
         return redirect("panel_config_documentos")

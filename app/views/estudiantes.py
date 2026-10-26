@@ -4,7 +4,9 @@ from ._common import *  # noqa: F401,F403
 
 @role_required(*PERMITIDOS_TODOS)
 def ficha_estudiante_view(request):
-    cursos = Curso.objects.all().order_by('anio', 'nivel', 'letra')
+    cursos = Curso.objects.filter(
+        filtro_q_por_niveles_permitidos(request.user, 'nivel', action='edit')
+    ).order_by('anio', 'nivel', 'letra')
     # Lógica de la ficha del estudiante
     return render(request, 'app/ficha_estudiante.html', {'cursos': cursos})
 
@@ -189,6 +191,9 @@ def nuevo_estudiante_view(request):
                 # Convergencia: la fila con RUT legado queda normalizada al guardar
                 est.rut = rut_norm
 
+            if not is_create:
+                _require_curso_perm(request.user, 'edit', est.curso)
+
             # Permiso según operación en el nivel del curso elegido
             op = 'add' if is_create else 'edit'
             if not has_perm_on_nivel(request.user, op, nivel_group):
@@ -202,6 +207,8 @@ def nuevo_estudiante_view(request):
                     'cursos': cursos,
                     'quien_matricula': quien_matricula,
                 })
+
+            actualizar_ficha = is_create or curso_obj.anio >= est.curso.anio
 
             # ---------- Set de campos ----------
             est.nombre_completo = nombre_completo
@@ -273,14 +280,13 @@ def nuevo_estudiante_view(request):
 
             # Validación & save
             est.full_clean()
-            est.save()
-
-            # === MatriculaAnual (SIEMPRE con el año del curso elegido)
-            MatriculaAnual.objects.update_or_create(
-                anio=curso_obj.anio,
-                estudiante=est,
-                defaults={'curso': curso_obj, 'estado': est.estado or 'Activo'}
-            )
+            with transaction.atomic():
+                if actualizar_ficha:
+                    est.save()
+                MatriculaAnual.objects.update_or_create(
+                    anio=curso_obj.anio, estudiante=est,
+                    defaults=MatriculaAnual.defaults_desde_estudiante(est),
+                )
 
             # Devolver URL de impresión con ?anio correcto
             imprimir_url = request.build_absolute_uri(f"/imprimir-estudiante/{est.rut}/?anio={curso_obj.anio}")
@@ -291,6 +297,8 @@ def nuevo_estudiante_view(request):
                 'operation': 'created' if is_create else 'updated'
             })
 
+        except PermissionDenied:
+            raise
         except Exception as e:
             err = str(e)
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
@@ -325,6 +333,7 @@ def buscar_estudiante(request):
                 estudiante = estudiante_por_rut(_norm_rut(rut))
                 if estudiante is None:
                     raise Estudiante.DoesNotExist
+                _require_curso_perm(request.user, 'view', estudiante.curso)
                 data = {
                     'rut': estudiante.rut,
                     'nombre_completo': estudiante.nombre_completo,
@@ -480,28 +489,11 @@ def guardar_estudiante(request):
         # convergencia: la fila legada queda con RUT normalizado al guardar
         estudiante.rut = rut
 
-    # 5) Resolver nivel para permisos:
-    #    - Si hay curso en POST => usar ese nivel
-    #    - Si no, y el estudiante ya tiene curso => usar nivel del curso actual
-    #    - Si no hay forma de resolver, omitir chequeo por nivel (evita .title() sobre None)
-    new_nivel = None
-    if curso is not None:
-        new_nivel = _nivel_from_curso_obj(curso)
-    elif getattr(estudiante, 'curso', None):
-        new_nivel = _nivel_from_curso_obj(estudiante.curso)
+    _require_curso_perm(request.user, 'add' if is_create else 'edit', curso)
+    if not is_create:
+        _require_curso_perm(request.user, 'edit', estudiante.curso)
 
-    # 5.1) Chequeo de permisos según operación (add/edit) SOLO si tengo nivel
-    #      (así evitamos el AttributeError por .title() en None)
-    if new_nivel:
-        oper = 'add' if is_create else 'edit'
-        if not has_perm_on_nivel(request.user, oper, new_nivel):
-            # Evita llamar .title() si por alguna razón no es str
-            nivel_label = (new_nivel.title() if isinstance(new_nivel, str) else 'este nivel')
-            msg = f'No tienes permiso para {"agregar" if is_create else "editar"} estudiantes en {nivel_label}.'
-            if _is_ajax(request):
-                return JsonResponse({'ok': False, 'error': msg}, status=403)
-            from django.core.exceptions import PermissionDenied
-            raise PermissionDenied(msg)
+    actualizar_ficha = is_create or (curso is not None and curso.anio >= estudiante.curso.anio)
 
     # 6) Setear campos del modelo
     try:
@@ -589,23 +581,14 @@ def guardar_estudiante(request):
         estudiante.acepta_fotografias = _to_bool(request.POST.get('acepta_fotografias'))
         estudiante.fecha_matricula = _parse_date(request.POST.get('fecha_matricula'))
 
-        # Guardar alumno
         estudiante.full_clean()
-        estudiante.save()
-
-        # ---------- MatriculaAnual ----------
-        if curso is not None:
-            anio_ma = anio_destino if anio_destino is not None else getattr(curso, 'anio', None)
-            if anio_ma is not None:
-                ma, _ = MatriculaAnual.objects.update_or_create(
-                    estudiante=estudiante, anio=anio_ma,
-                    defaults={'curso': curso, 'estado': estudiante.estado or 'Activo'}
-                )
-                # Limpieza de duplicados sin curso
-                (MatriculaAnual.objects
-                 .filter(estudiante=estudiante, anio=anio_ma, curso__isnull=True)
-                 .exclude(pk=ma.pk)
-                 .delete())
+        with transaction.atomic():
+            if actualizar_ficha:
+                estudiante.save()
+            MatriculaAnual.objects.update_or_create(
+                estudiante=estudiante, anio=curso.anio,
+                defaults=MatriculaAnual.defaults_desde_estudiante(estudiante),
+            )
 
     except Exception as e:
         if _is_ajax(request):
@@ -646,12 +629,9 @@ def listar_estudiantes(request):
             'q': q, 'estudiantes': [], 'anio': None, 'anios_disponibles': [],
         })
 
-    # Niveles especiales permitidos siempre en la UI
-    NIVELES_ESPECIALES = [NIVEL_POR_ASIGNAR, NIVEL_EGRESADOS]
-
     # Filtros por nivel para Curso y para MatriculaAnual (MA)
-    q_niv_curso = Q(nivel__in=niveles_ok) | Q(nivel__in=NIVELES_ESPECIALES)
-    q_niv_ma    = Q(curso__nivel__in=niveles_ok) | Q(curso__nivel__in=NIVELES_ESPECIALES) | Q(curso__isnull=True)
+    q_niv_curso = filtro_q_por_niveles_permitidos(request.user, 'nivel')
+    q_niv_ma = filtro_q_por_niveles_permitidos(request.user, 'curso__nivel')
 
     # ===== años disponibles =====
     visible_years = list(
@@ -737,7 +717,7 @@ def listar_estudiantes(request):
             curso_seleccionado = f"{LABEL_SIN_NIVEL} - {anio_sel}"
             ma_qs = (
                 MatriculaAnual.objects
-                .filter(anio=anio_sel, curso__isnull=True)
+                .filter(anio=anio_sel, curso__isnull=True).filter(q_niv_ma)
                 .select_related('estudiante')
                 .order_by('estudiante__nombre_completo')
             )
@@ -760,7 +740,7 @@ def listar_estudiantes(request):
                 curso_sel = None
 
             # Seguridad extra: no permitir cursos fuera de los niveles permitidos
-            if curso_sel and not (curso_sel.nivel in niveles_ok or curso_sel.nivel in NIVELES_ESPECIALES):
+            if curso_sel and not Curso.objects.filter(pk=curso_sel.pk).filter(q_niv_curso).exists():
                 curso_sel = None  # ignora curso no permitido
 
             if curso_sel and curso_sel.anio == anio_sel:
@@ -825,8 +805,7 @@ def listar_estudiantes(request):
             est_qs = (
                 Estudiante.objects.filter(
                     curso__anio=anio_sel,
-                    curso__nivel__in=(list(niveles_ok) + NIVELES_ESPECIALES)
-                )
+                ).filter(q_niv_ma)
                 .select_related('curso')
                 .order_by('curso__nivel', 'curso__letra', 'nombre_completo')
             )
@@ -913,7 +892,9 @@ def ficha_estudiante(request):
             anio_actual = timezone.now().year
 
     # Cursos para poblar el <select>, todos los de los años visibles
-    cursos = Curso.objects.filter(anio__in=anios_visibles).order_by('anio', 'nivel', 'letra')
+    cursos = Curso.objects.filter(anio__in=anios_visibles).filter(
+        filtro_q_por_niveles_permitidos(request.user, 'nivel', action='edit')
+    ).order_by('anio', 'nivel', 'letra')
 
     ctx = {
         'anios_visibles': anios_visibles,   # --> usado en el <select id="anioVisible">
@@ -953,6 +934,7 @@ def buscar_estudiantes_por_rut(request):
     estudiantes = (
         Estudiante.objects
         .select_related('curso')
+        .filter(filtro_q_por_niveles_permitidos(request.user, 'curso__nivel'))
         .filter(Q(rut__in=_rut_variants(rut_norm)) | Q(rut__startswith=rut_norm))
         .order_by('id')
     )
@@ -1034,6 +1016,7 @@ def buscar_estudiantes_por_rut(request):
 
 @require_POST
 @role_required(*PERMITIDOS_TODOS)
+@transaction.atomic
 def asignar_curso_en_anio(request):
     import json
     payload = {}
@@ -1069,9 +1052,17 @@ def asignar_curso_en_anio(request):
     if getattr(curso, 'nivel', None) == NIVEL_POR_ASIGNAR:
         return JsonResponse({'ok': False, 'error': 'No puedes asignar el placeholder "Por Asignar" como curso.'}, status=400)
 
+    _require_curso_perm(request.user, 'edit', e.curso)
+    _require_curso_perm(request.user, 'edit', curso)
+    existente = MatriculaAnual.objects.filter(estudiante=e, anio=anio).select_related('curso').first()
+    if existente:
+        _require_curso_perm(request.user, 'edit', existente.curso)
+
     # Evita duplicados y asigna
     ma, _ = MatriculaAnual.objects.update_or_create(
-        estudiante=e, anio=anio, defaults={'curso': curso}
+        estudiante=e, anio=anio,
+        defaults={'curso': curso},
+        create_defaults=dict(MatriculaAnual.defaults_desde_estudiante(e), curso=curso),
     )
 
     # La ficha (Estudiante.curso) sigue la misma regla forward-only del clonado de años:
@@ -1128,6 +1119,10 @@ def detalles_estudiante(request, estudiante_id):
     curso_view = getattr(ma, 'curso', None) or getattr(estudiante, 'curso', None)
     anio_view = getattr(curso_view, 'anio', None)
 
+    _require_curso_perm(request.user, 'view', curso_view)
+    _require_curso_perm(request.user, 'view', estudiante.curso)
+    estudiante = _estudiante_en_matricula(estudiante, ma)
+
     # 5) Documentos (los de siempre)
     documentos = DocumentoEstudiante.objects.filter(estudiante=estudiante)
 
@@ -1145,28 +1140,39 @@ def detalles_estudiante(request, estudiante_id):
 @role_required(*PERMITIDOS_TODOS)
 def descargar_documento(request, documento_id):
     documento = get_object_or_404(DocumentoEstudiante, id=documento_id)
+    _require_curso_perm(request.user, 'view', documento.estudiante.curso)
     response = FileResponse(documento.archivo, as_attachment=True, filename=documento.nombre)
     return response
 
 
 @login_required
 @role_required(*PERMITIDOS_TODOS)  # misma puerta que listar_estudiantes
-def listar_estudiantes_anio(request):
+def listar_estudiantes_anio(request, anio=None):
+    if not niveles_permitidos_por_usuario(request.user, action='view'):
+        raise PermissionDenied('No tienes permisos para consultar estudiantes.')
     # Año seleccionado (GET ?anio=)
     try:
-        anio = int(request.GET.get('anio', ''))
+        anio = int(anio or request.GET.get('anio', ''))
     except ValueError:
         anio = 0
 
     # Años disponibles (según MatriculaAnual)
     years = list(
-        MatriculaAnual.objects.order_by('-anio')
+        MatriculaAnual.objects.filter(
+            filtro_q_por_niveles_permitidos(request.user, 'curso__nivel')
+        ).order_by('-anio')
         .values_list('anio', flat=True).distinct()
     )
     if not years:
         years = [timezone.now().year]
     if not anio:
         anio = years[0]
+
+    if not is_admin(request.user):
+        visibles = set(AcademicYear.objects.filter(is_visible=True).values_list('anio', flat=True))
+        years = [year for year in years if year in visibles]
+        if anio not in years:
+            raise PermissionDenied('No tienes acceso a este año académico.')
 
     # === Asegurar que existan los placeholders "Por Asignar" y "Egresados" para el año ===
     # (si ya existen, no hace nada)
@@ -1180,7 +1186,9 @@ def listar_estudiantes_anio(request):
     # Catálogo de cursos del año + conteo
     # Ordenamos con "Por Asignar" primero, luego todos los normales por nivel/letra, y "Egresados" al final.
     cursos = (
-        Curso.objects.filter(anio=anio)
+        Curso.objects.filter(anio=anio).filter(
+            filtro_q_por_niveles_permitidos(request.user, 'nivel')
+        )
         .annotate(
             n_est=Count('matriculas', filter=Q(matriculas__anio=anio)),
             ord_especial=Case(
@@ -1194,11 +1202,14 @@ def listar_estudiantes_anio(request):
     )
 
     # Conteo de alumnos "Sin nivel" (curso NULL en MA)
-    sin_nivel_count = MatriculaAnual.objects.filter(anio=anio, curso__isnull=True).count()
+    sin_nivel_count = MatriculaAnual.objects.filter(anio=anio, curso__isnull=True).filter(
+        filtro_q_por_niveles_permitidos(request.user, 'curso__nivel')
+    ).count()
 
     # Query base por año
     qs = (
         MatriculaAnual.objects.filter(anio=anio)
+        .filter(filtro_q_por_niveles_permitidos(request.user, 'curso__nivel'))
         .select_related('estudiante', 'curso')
         .order_by('curso__nivel', 'curso__letra', 'estudiante__nombre_completo')
     )
@@ -1288,6 +1299,7 @@ def cambiar_rut_estudiante(request, estudiante_id):
     """Cambia el RUT del estudiante (p. ej. provisional de extranjero → definitivo),
     validando el DV del nuevo RUN y bloqueando colisiones con otros estudiantes."""
     est = get_object_or_404(Estudiante, id=estudiante_id)
+    _require_curso_perm(request.user, 'edit', est.curso)
 
     nuevo = _norm_rut(request.POST.get('rut_nuevo') or '')
     if not nuevo or not nuevo.isdigit() or len(nuevo) < 8:
@@ -1339,6 +1351,7 @@ def busqueda_global(request):
     if len(q) < 3:
         return JsonResponse({'resultados': []})
     qs = (Estudiante.objects.select_related('curso')
+          .filter(filtro_q_por_niveles_permitidos(request.user, 'curso__nivel'))
           .filter(Q(nombre_completo__icontains=q) | Q(rut__icontains=_norm_rut(q)))
           .order_by('nombre_completo')[:8])
     return JsonResponse({'resultados': [

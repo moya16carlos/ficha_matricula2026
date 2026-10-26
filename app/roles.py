@@ -31,7 +31,7 @@ def role_required(*allowed_roles):
                 return redirect('login')
 
             user_rol = getattr(user, 'rol', None)
-            if user_rol == ADMIN:
+            if user_rol == ADMIN or user.is_superuser:
                 return view_func(request, *args, **kwargs)
 
             if allowed_roles and user_rol not in allowed_roles:
@@ -56,13 +56,15 @@ def _levels_for_group(nivel_group: str):
         return media
     return []
 
-def curso_nivel_to_group(nivel_text: str) -> str:
+def curso_nivel_to_group(nivel_text: str) -> str | None:
     """
     Mapea el texto de Curso.nivel (p. ej. "1° Medio") a BASICA o MEDIA.
     """
-    if 'Medio' in (nivel_text or ''):
+    if nivel_text in MEDIA_LEVELS:
         return MEDIA
-    return BASICA
+    if nivel_text in BASICA_LEVELS:
+        return BASICA
+    return None
 
 # ===== Permisos por nivel (usa la relación reversa permisos_nivel) =====
 def has_perm_on_nivel(user, action: str, nivel_group: str) -> bool:
@@ -71,7 +73,7 @@ def has_perm_on_nivel(user, action: str, nivel_group: str) -> bool:
     """
     if not getattr(user, 'is_authenticated', False):
         return False
-    if getattr(user, 'rol', None) == ADMIN:
+    if getattr(user, 'rol', None) == ADMIN or user.is_superuser:
         return True
 
     try:
@@ -106,7 +108,7 @@ def niveles_permitidos_por_usuario(user, action='view'):
         return []
 
     # Admin ve todo
-    if getattr(user, 'rol', None) == 'ADMINISTRADOR':
+    if getattr(user, 'rol', None) == ADMIN or user.is_superuser:
         return BASICA_LEVELS + MEDIA_LEVELS
 
     # Busca sus permisos por nivel
@@ -133,8 +135,14 @@ def filtro_q_por_niveles_permitidos(user, field='nivel', action='view'):
     Q(field__in=[niveles]) listo para usar en Curso o en relaciones (ej: 'curso__nivel').
     Si no hay permisos, devuelve Q(False) práctico (no matchea nada).
     """
+    if user.is_authenticated and (user.rol == ADMIN or user.is_superuser):
+        return Q()
     levels = niveles_permitidos_por_usuario(user, action=action)
     if not levels:
         # Q imposible (truco para “none” sin depender de pk)
         return Q(**{f'{field}__in': ['__NO_PERM__']})
-    return Q(**{f'{field}__in': levels})
+    query = Q(**{f'{field}__in': levels})
+    if has_perm_on_nivel(user, action, BASICA) and has_perm_on_nivel(user, action, MEDIA):
+        query |= Q(**{f'{field}__in': ['Sin asignar', 'Por Asignar', 'Egresados']})
+        query |= Q(**{f'{field}__isnull': True})
+    return query

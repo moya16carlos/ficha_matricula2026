@@ -31,13 +31,18 @@ def home_view(request):
     from .estudiantes import _es_rut_provisional
 
     anio_actual = date.today().year
-    ruts_prov = [r for r in Estudiante.objects.values_list('rut', flat=True) if _es_rut_provisional(r)]
+    estudiantes = Estudiante.objects.filter(
+        filtro_q_por_niveles_permitidos(request.user, 'curso__nivel')
+    )
+    ruts_prov = [r for r in estudiantes.values_list('rut', flat=True) if _es_rut_provisional(r)]
     roles_resumen = (Usuarios.objects.values('rol')
                      .annotate(n=Count('id_usuario')).order_by('-n'))
     ctx = {
         'anio_actual': anio_actual,
-        'n_estudiantes': Estudiante.objects.count(),
-        'n_matriculas_anio': MatriculaAnual.objects.filter(anio=anio_actual).count(),
+        'n_estudiantes': estudiantes.count(),
+        'n_matriculas_anio': MatriculaAnual.objects.filter(anio=anio_actual).filter(
+            filtro_q_por_niveles_permitidos(request.user, 'curso__nivel')
+        ).count(),
         'n_provisionales': len(ruts_prov),
         'n_cursos_anio': (Curso.objects.filter(anio=anio_actual)
                           .exclude(nivel=NIVEL_POR_ASIGNAR)

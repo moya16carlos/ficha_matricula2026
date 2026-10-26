@@ -3,15 +3,8 @@ from ._common import *  # noqa: F401,F403
 
 
 CAMPOS_SEED = [
-    'curso', 'estado', 'fecha_matricula', 'nacionalidad', 'domicilio', 'comuna',
-    'ascendencia_indigena', 'etnia', 'pertenece_al_pie', 'ha_repetido_curso', 'de_donde_viene',
-    'nombre_madre', 'rut_madre', 'nivel_educacional_madre', 'ocupacion_madre', 'telefono_madre', 'email_madre',
-    'nombre_padre', 'rut_padre', 'nivel_educacional_padre', 'ocupacion_padre', 'telefono_padre', 'email_padre',
-    'nombre_apoderado', 'rut_apoderado', 'nivel_educacional_apoderado', 'ocupacion_apoderado', 'telefono_apoderado', 'email_apoderado',
-    'nombre_apoderado_suplente', 'rut_apoderado_suplente', 'nivel_educacional_apoderado_suplente', 'ocupacion_apoderado_suplente',
-    'telefono_apoderado_suplente', 'email_apoderado_suplente', 'vive_con', 'resolucion_judicial', 'problemas_salud',
-    'descripcion_problemas_salud', 'impide_educacion_fisica', 'tipo_transporte', 'opta_religion',
-    'certificado_medico', 'acepta_fotografias', 'sistema_salud'
+    campo.name for campo in MatriculaAnual._meta.fields
+    if campo.name not in ('id', 'estudiante') and hasattr(Estudiante, campo.name)
 ]
 
 @transaction.atomic
@@ -21,21 +14,25 @@ def seed_matricula_from_estudiantes(anio: int, only_activos: bool = True, overwr
         qs = qs.filter(estado='Activo')
 
     creados = actualizados = omitidos = 0
-    hoy = timezone.now().date()
 
     for e in qs:
-        ma, created = MatriculaAnual.objects.get_or_create(estudiante=e, anio=anio)
-        if created or overwrite:
-            for f in CAMPOS_SEED:
-                if hasattr(e, f):
-                    setattr(ma, f, getattr(e, f))
-            if not ma.fecha_matricula:
-                ma.fecha_matricula = hoy
-            ma.save()
-            if created:
-                creados += 1
-            else:
-                actualizados += 1
+        curso_destino = map_curso_destino(
+            e.curso, anio, False, True, NIVEL_POR_ASIGNAR, None,
+        )
+        defaults = MatriculaAnual.defaults_desde_estudiante(e)
+        defaults['curso'] = curso_destino
+        if overwrite:
+            ma, created = MatriculaAnual.objects.update_or_create(
+                estudiante=e, anio=anio, defaults=defaults,
+            )
+        else:
+            ma, created = MatriculaAnual.objects.get_or_create(
+                estudiante=e, anio=anio, defaults=defaults,
+            )
+        if created:
+            creados += 1
+        elif overwrite:
+            actualizados += 1
         else:
             omitidos += 1
 
@@ -82,6 +79,10 @@ def _fmt_basica(n): return f"{n}° Básico"
 def _fmt_media(n): return f"{n}° Medio"
 
 def next_nivel(nivel):
+    if nivel == 'Prekinder':
+        return 'Kinder'
+    if nivel == 'Kinder':
+        return '1° Básico'
     b = _parse_basica_n(nivel)
     if b: return _fmt_basica(b + 1) if b < 8 else "1° Medio"
     m = _parse_media_n(nivel)
@@ -106,7 +107,7 @@ def map_curso_destino(curso_origen, target_year, promote, auto_create, placehold
         next_level = next_nivel(nivel)
         if next_level:
             return ensure_curso(target_year, next_level, letra) if auto_create else Curso.objects.filter(anio=target_year, nivel=next_level, letra=letra).first()
-        if graduate_level:
+        if nivel == '4° Medio' and graduate_level:
             return ensure_curso(target_year, graduate_level, None) if auto_create else Curso.objects.filter(anio=target_year, nivel=graduate_level).first()
         return None
     else:
@@ -141,7 +142,8 @@ def clone_matriculas_anio(source_year, target_year, only_activos=False, promote_
             skipped += 1
             continue
 
-        defaults = {'curso': curso_dest, 'anio': target_year, 'estado': e.estado or 'Activo'}
+        defaults = dict(MatriculaAnual.defaults_desde_estudiante(e),
+                        curso=curso_dest, estado=e.estado or 'Activo')
         obj, is_created = MatriculaAnual.objects.get_or_create(estudiante=e, anio=target_year, defaults=defaults)
         if is_created:
             created += 1
@@ -254,11 +256,8 @@ def clone_curso_to_curso(
         # Estado por defecto
         estado_final = (ma_src.estado if ma_src and getattr(ma_src, 'estado', None) else (e.estado or 'Activo'))
 
-        defaults = {
-            'curso': target,
-            'anio': target.anio,
-            'estado': estado_final,
-        }
+        defaults = dict(MatriculaAnual.defaults_desde_estudiante(e),
+                        curso=target, estado=estado_final)
 
         # Unique recomendado: (estudiante, anio). Si no lo tienes, agrégalo en el modelo.
         obj, created = MatriculaAnual.objects.get_or_create(

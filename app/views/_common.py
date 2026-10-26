@@ -12,6 +12,7 @@ from functools import wraps
 from types import SimpleNamespace
 from typing import Optional, Dict, List, Tuple, Any
 from collections import namedtuple
+from copy import copy
 from datetime import date, datetime
 
 import json
@@ -195,14 +196,25 @@ def _nivel_from_curso_obj(curso):
     """
     Devuelve 'BASICA' | 'MEDIA' | None dependiendo del curso.
     """
-    if not curso:
-        return None
-    nivel = (curso.nivel or '').lower()
-    if 'básic' in nivel or 'basico' in nivel or 'basica' in nivel:
-        return 'BASICA'
-    if 'medio' in nivel or 'media' in nivel:
-        return 'MEDIA'
-    return None
+    return curso_nivel_to_group(curso.nivel) if curso else None
+
+
+def _require_curso_perm(user, action, curso):
+    nivel = _nivel_from_curso_obj(curso)
+    niveles = (nivel,) if nivel else (BASICA, MEDIA)
+    if not all(has_perm_on_nivel(user, action, nv) for nv in niveles):
+        raise PermissionDenied('No tienes permiso para esta acción en el nivel del estudiante.')
+
+
+def _estudiante_en_matricula(estudiante, matricula):
+    if not matricula or not matricula.datos_congelados:
+        return estudiante
+    ficha = copy(estudiante)
+    for campo in MatriculaAnual.defaults_desde_estudiante(estudiante):
+        if hasattr(ficha, campo):
+            setattr(ficha, campo, getattr(matricula, campo))
+    ficha.nombre_completo = matricula.nombre_snapshot or estudiante.nombre_completo
+    return ficha
 
 
 def _curso_en_anio(estudiante, anio):
@@ -294,7 +306,7 @@ def _nombre_y_rol_matriculador(est):
 
 
 def is_admin(u) -> bool:
-    return bool(u.is_superuser or u.is_staff)
+    return bool(u.is_authenticated and (u.is_superuser or u.rol == ADMIN))
 
 
 # =========================
@@ -337,4 +349,5 @@ __all__ = [
     '_nivel_from_curso_obj', '_curso_en_anio', '_curso_en_anio_puro',
     '_nombre_y_rol_matriculador', 'is_admin',
     '_rut_variants', 'estudiante_por_rut',
+    '_require_curso_perm', '_estudiante_en_matricula',
 ]

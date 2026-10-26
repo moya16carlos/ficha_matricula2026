@@ -185,7 +185,9 @@ def listar_estudiantes_admin_view(request):
         return redirect("home")
     
     # Listar todos los estudiantes
-    estudiantes = Estudiante.objects.all()
+    estudiantes = Estudiante.objects.filter(
+        filtro_q_por_niveles_permitidos(request.user, 'curso__nivel')
+    )
 
     # Filtrar los cursos para enseñanza básica y media
     cursos_basica = ['Prekinder', 'Kinder'] + [f"{i}° Básico" for i in range(1, 9)]
